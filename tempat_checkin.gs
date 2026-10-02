@@ -108,15 +108,16 @@ function getTempatCheckIn(rawValue) {
     return "WHOOSH KARAWANG";
   }
 
-  // --- Aturan rentang tanggal (prioritas lebih rendah) ---
+  // --- Aturan rentang tanggal ---
 
   // 1. LOBBY RENSINDA: 17-20/11/2026, 05:45 - 07:30
   if (day >= 17 && day <= 20 && timeMin >= 345 && timeMin <= 450) {
     return "LOBBY RENSINDA";
   }
 
-  // 2. SRTC: 17-20/11/2026, 15:00 - 22:30
-  if (day >= 17 && day <= 20 && timeMin >= 900 && timeMin <= 1350) {
+  // 2. SRTC: 17-18/11/2026 15:00-17:30, 19/11/2026 21:00-22:30
+  if ((day >= 17 && day <= 18 && timeMin >= 900 && timeMin <= 1050) ||
+      (day === 19 && timeMin >= 1260 && timeMin <= 1350)) {
     return "SRTC";
   }
 
