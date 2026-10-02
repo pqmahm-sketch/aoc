@@ -15,8 +15,19 @@ var HEADER_ROW = 1;
 // ============================================================
 // Fungsi batch: proses semua baris sekaligus
 // ============================================================
+function getSpreadsheet() {
+  try {
+    return SpreadsheetApp.openById(SPREADSHEET_ID);
+  } catch (e) {
+    Logger.log("openById gagal: " + e.message);
+  }
+  var active = SpreadsheetApp.getActiveSpreadsheet();
+  if (active) return active;
+  throw new Error("Spreadsheet tidak ditemukan. Pastikan SPREADSHEET_ID benar: " + SPREADSHEET_ID);
+}
+
 function klasifikasiTempatCheckIn() {
-  var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  var ss = getSpreadsheet();
   var sheet = ss.getSheetByName(SHEET_NAME);
   if (!sheet) {
     Logger.log("Sheet '" + SHEET_NAME + "' tidak ditemukan.");
