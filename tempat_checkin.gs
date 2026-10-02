@@ -6,6 +6,7 @@
  * atau gunakan onEdit trigger untuk otomatis mengisi saat data masuk.
  */
 
+var SPREADSHEET_ID = "1S3nAnX5ije6prGTwnJ7sZsdYmQtu7q8g";
 var SHEET_NAME = "M.LOOKER";
 var CHECK_IN_COL = 12;     // Kolom L (CHECK IN)
 var TEMPAT_COL = 13;       // Kolom M (TEMPAT CHECK IN)
@@ -15,10 +16,10 @@ var HEADER_ROW = 1;
 // Fungsi batch: proses semua baris sekaligus
 // ============================================================
 function klasifikasiTempatCheckIn() {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
   var sheet = ss.getSheetByName(SHEET_NAME);
   if (!sheet) {
-    SpreadsheetApp.getUi().alert("Sheet '" + SHEET_NAME + "' tidak ditemukan.");
+    Logger.log("Sheet '" + SHEET_NAME + "' tidak ditemukan.");
     return;
   }
 
