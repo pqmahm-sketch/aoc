@@ -161,11 +161,40 @@ function parseDateString(str) {
 }
 
 // ============================================================
+// Fungsi tes: jalankan untuk verifikasi logika klasifikasi
+// ============================================================
+function testKlasifikasi() {
+  var testCases = [
+    { input: "17/11/2026 06:00:00", expected: "LOBBY RENSINDA" },
+    { input: "18/11/2026 16:00:00", expected: "SRTC" },
+    { input: "19/11/2026 14:45:59", expected: "BALLROOM" },
+    { input: "19/11/2026 15:30:00", expected: "BALLROOM" },
+    { input: "19/11/2026 18:21:34", expected: "BALLROOM" },
+    { input: "19/11/2026 21:30:00", expected: "SRTC" },
+    { input: "20/11/2026 09:00:00", expected: "WHOOSH PADALARANG" },
+    { input: "20/11/2026 13:00:00", expected: "WHEELS DAGO" },
+    { input: "20/11/2026 15:00:00", expected: "TANG. PRAHU" },
+    { input: "20/11/2026 17:00:00", expected: "KARSA LAND" },
+    { input: "20/11/2026 19:30:00", expected: "WHOOSH KARAWANG" }
+  ];
+
+  var results = [];
+  for (var i = 0; i < testCases.length; i++) {
+    var tc = testCases[i];
+    var actual = getTempatCheckIn(tc.input);
+    var status = (actual === tc.expected) ? "OK" : "GAGAL";
+    results.push(status + " | " + tc.input + " | expected: " + tc.expected + " | actual: " + actual);
+  }
+  Logger.log(results.join("\n"));
+}
+
+// ============================================================
 // Menu kustom di spreadsheet
 // ============================================================
 function onOpen() {
   SpreadsheetApp.getUi()
     .createMenu("Otomasi Absensi")
     .addItem("Isi Tempat Check In", "klasifikasiTempatCheckIn")
+    .addItem("Tes Klasifikasi", "testKlasifikasi")
     .addToUi();
 }
