@@ -95,9 +95,9 @@ function getTempatCheckIn(rawValue) {
     return "BALLROOM";
   }
 
-  // 4. WHOOSH PADALARANG: 20/11/2026, 08:45 - 10:00
+  // 4. WHOOSH TEGALLUAR: 20/11/2026, 08:45 - 10:00
   if (day === 20 && timeMin >= 525 && timeMin <= 600) {
-    return "WHOOSH PADALARANG";
+    return "WHOOSH TEGALLUAR";
   }
 
   // 5. WHEELS DAGO: 20/11/2026, 12:30 - 14:30
@@ -171,7 +171,7 @@ function testKlasifikasi() {
     { input: "19/11/2026 15:30:00", expected: "BALLROOM" },
     { input: "19/11/2026 18:21:34", expected: "BALLROOM" },
     { input: "19/11/2026 21:30:00", expected: "SRTC" },
-    { input: "20/11/2026 09:00:00", expected: "WHOOSH PADALARANG" },
+    { input: "20/11/2026 09:00:00", expected: "WHOOSH TEGALLUAR" },
     { input: "20/11/2026 13:00:00", expected: "WHEELS DAGO" },
     { input: "20/11/2026 15:00:00", expected: "TANG. PRAHU" },
     { input: "20/11/2026 17:00:00", expected: "KARSA LAND" },
