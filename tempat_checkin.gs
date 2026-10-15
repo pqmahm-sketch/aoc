@@ -13,7 +13,7 @@ var TEMPAT_COL = 13;       // Kolom M (TEMPAT CHECK IN)
 var HEADER_ROW = 1;
 
 // ============================================================
-// Fungsi batch: proses semua baris sekaligus
+// Helper: buka spreadsheet
 // ============================================================
 function getSpreadsheet() {
   try {
@@ -26,6 +26,9 @@ function getSpreadsheet() {
   throw new Error("Spreadsheet tidak ditemukan. Pastikan SPREADSHEET_ID benar: " + SPREADSHEET_ID);
 }
 
+// ============================================================
+// Fungsi batch: proses semua baris sekaligus
+// ============================================================
 function klasifikasiTempatCheckIn() {
   var ss = getSpreadsheet();
   var sheet = ss.getSheetByName(SHEET_NAME);
@@ -38,7 +41,7 @@ function klasifikasiTempatCheckIn() {
   if (lastRow <= HEADER_ROW) return;
 
   var dataRows = lastRow - HEADER_ROW;
-  var checkInValues = sheet.getRange(HEADER_ROW + 1, CHECK_IN_COL, dataRows, 1).getValues();
+  var checkInValues = sheet.getRange(HEADER_ROW + 1, CHECK_IN_COL, dataRows, 1).getDisplayValues();
   var tempatValues = [];
 
   for (var i = 0; i < checkInValues.length; i++) {
@@ -60,7 +63,7 @@ function onEdit(e) {
   if (range.getColumn() !== CHECK_IN_COL) return;
   if (range.getRow() <= HEADER_ROW) return;
 
-  var raw = range.getValue();
+  var raw = range.getDisplayValue();
   var tempat = getTempatCheckIn(raw);
   sheet.getRange(range.getRow(), TEMPAT_COL).setValue(tempat);
 }
@@ -69,26 +72,35 @@ function onEdit(e) {
 // Logika klasifikasi tempat berdasarkan tanggal & waktu
 // ============================================================
 function getTempatCheckIn(rawValue) {
-  if (!rawValue || rawValue === "") return "";
+  if (!rawValue || rawValue === "" || String(rawValue).trim() === "") return "";
 
   var date;
   if (rawValue instanceof Date) {
     date = rawValue;
   } else {
-    date = parseDateString(String(rawValue));
+    date = parseDateString(String(rawValue).trim());
   }
 
   if (!date || isNaN(date.getTime())) return "";
 
   var day = date.getDate();
-  var month = date.getMonth() + 1; // getMonth() 0-indexed
+  var month = date.getMonth() + 1;
   var year = date.getFullYear();
   var timeMin = date.getHours() * 60 + date.getMinutes();
 
   if (month !== 11 || year !== 2026) return "";
   if (day < 17 || day > 20) return "";
 
-  // --- Aturan spesifik tanggal tertentu (prioritas lebih tinggi) ---
+  // 1. LOBBY RENSINDA: 17-20/11/2026, 05:45 - 07:30
+  if (day >= 17 && day <= 20 && timeMin >= 345 && timeMin <= 450) {
+    return "LOBBY RENSINDA";
+  }
+
+  // 2. SRTC: 17-18/11/2026 15:00-17:30, 19/11/2026 21:00-22:30
+  if ((day >= 17 && day <= 18 && timeMin >= 900 && timeMin <= 1050) ||
+      (day === 19 && timeMin >= 1260 && timeMin <= 1350)) {
+    return "SRTC";
+  }
 
   // 3. BALLROOM: 19/11/2026, 14:30 - 18:30
   if (day === 19 && timeMin >= 870 && timeMin <= 1110) {
@@ -120,19 +132,6 @@ function getTempatCheckIn(rawValue) {
     return "WHOOSH KARAWANG";
   }
 
-  // --- Aturan rentang tanggal ---
-
-  // 1. LOBBY RENSINDA: 17-20/11/2026, 05:45 - 07:30
-  if (day >= 17 && day <= 20 && timeMin >= 345 && timeMin <= 450) {
-    return "LOBBY RENSINDA";
-  }
-
-  // 2. SRTC: 17-18/11/2026 15:00-17:30, 19/11/2026 21:00-22:30
-  if ((day >= 17 && day <= 18 && timeMin >= 900 && timeMin <= 1050) ||
-      (day === 19 && timeMin >= 1260 && timeMin <= 1350)) {
-    return "SRTC";
-  }
-
   return "";
 }
 
@@ -140,7 +139,6 @@ function getTempatCheckIn(rawValue) {
 // Parser untuk format tanggal "dd/MM/yyyy HH:mm:ss"
 // ============================================================
 function parseDateString(str) {
-  // Format: "17/11/2026 06:30:00" atau "17/11/2026 6:30"
   var parts = str.split(" ");
   if (parts.length < 2) return null;
 
@@ -151,13 +149,56 @@ function parseDateString(str) {
   if (timeParts.length < 2) return null;
 
   var day = parseInt(dateParts[0], 10);
-  var month = parseInt(dateParts[1], 10) - 1; // Date() bulan 0-indexed
+  var month = parseInt(dateParts[1], 10) - 1;
   var year = parseInt(dateParts[2], 10);
   var hours = parseInt(timeParts[0], 10);
   var minutes = parseInt(timeParts[1], 10);
   var seconds = timeParts.length >= 3 ? parseInt(timeParts[2], 10) : 0;
 
   return new Date(year, month, day, hours, minutes, seconds);
+}
+
+// ============================================================
+// Debug: log detail parsing untuk baris tertentu
+// ============================================================
+function debugRows() {
+  var ss = getSpreadsheet();
+  var sheet = ss.getSheetByName(SHEET_NAME);
+  var lastRow = sheet.getLastRow();
+  var dataRows = lastRow - HEADER_ROW;
+
+  var displayValues = sheet.getRange(HEADER_ROW + 1, CHECK_IN_COL, dataRows, 1).getDisplayValues();
+  var rawValues = sheet.getRange(HEADER_ROW + 1, CHECK_IN_COL, dataRows, 1).getValues();
+
+  var logs = [];
+  for (var i = 0; i < displayValues.length; i++) {
+    var display = displayValues[i][0];
+    var raw = rawValues[i][0];
+    if (!display || display.trim() === "") continue;
+
+    var isDate = raw instanceof Date;
+    var parsed = isDate ? raw : parseDateString(String(display).trim());
+    if (!parsed || isNaN(parsed.getTime())) continue;
+
+    var day = parsed.getDate();
+    var month = parsed.getMonth() + 1;
+    if (month !== 11 || day !== 19) continue;
+
+    var timeMin = parsed.getHours() * 60 + parsed.getMinutes();
+    var result = getTempatCheckIn(display);
+
+    logs.push(
+      "Row " + (i + 2) +
+      " | display: " + display +
+      " | rawType: " + (isDate ? "Date" : typeof raw) +
+      " | rawToString: " + String(raw) +
+      " | day=" + day + " month=" + month +
+      " | hours=" + parsed.getHours() + " min=" + parsed.getMinutes() +
+      " | timeMin=" + timeMin +
+      " | result: " + result
+    );
+  }
+  Logger.log("=== DEBUG Nov 19 rows ===\n" + logs.join("\n"));
 }
 
 // ============================================================
@@ -196,5 +237,6 @@ function onOpen() {
     .createMenu("Otomasi Absensi")
     .addItem("Isi Tempat Check In", "klasifikasiTempatCheckIn")
     .addItem("Tes Klasifikasi", "testKlasifikasi")
+    .addItem("Debug Baris Nov 19", "debugRows")
     .addToUi();
 }
