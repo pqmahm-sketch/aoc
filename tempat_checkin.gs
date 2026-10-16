@@ -53,7 +53,7 @@ function klasifikasiTempatCheckIn() {
 }
 
 // ============================================================
-// Trigger onEdit: otomatis isi saat kolom L diubah
+// Trigger onEdit: otomatis isi saat kolom L diubah (manual)
 // ============================================================
 function onEdit(e) {
   var sheet = e.source.getActiveSheet();
@@ -66,6 +66,103 @@ function onEdit(e) {
   var raw = range.getDisplayValue();
   var tempat = getTempatCheckIn(raw);
   sheet.getRange(range.getRow(), TEMPAT_COL).setValue(tempat);
+}
+
+// ============================================================
+// Installable trigger: onChange — tangkap perubahan programatik
+// ============================================================
+function onChangeHandler(e) {
+  if (e.changeType !== "EDIT" && e.changeType !== "INSERT_ROW") return;
+
+  var ss = e.source || getSpreadsheet();
+  var sheet = ss.getSheetByName(SHEET_NAME);
+  if (!sheet) return;
+
+  var lastRow = sheet.getLastRow();
+  if (lastRow <= HEADER_ROW) return;
+
+  var dataRows = lastRow - HEADER_ROW;
+  var checkInValues = sheet.getRange(HEADER_ROW + 1, CHECK_IN_COL, dataRows, 1).getDisplayValues();
+  var tempatValues = sheet.getRange(HEADER_ROW + 1, TEMPAT_COL, dataRows, 1).getDisplayValues();
+  var updates = [];
+  var hasUpdate = false;
+
+  for (var i = 0; i < checkInValues.length; i++) {
+    var checkIn = checkInValues[i][0];
+    var current = tempatValues[i][0];
+    var expected = getTempatCheckIn(checkIn);
+
+    if (expected !== current) {
+      updates.push([expected]);
+      hasUpdate = true;
+    } else {
+      updates.push([current]);
+    }
+  }
+
+  if (hasUpdate) {
+    sheet.getRange(HEADER_ROW + 1, TEMPAT_COL, updates.length, 1).setValues(updates);
+  }
+}
+
+// ============================================================
+// Pasang trigger otomatis — jalankan SEKALI saja
+// ============================================================
+function pasangTrigger() {
+  var ss = getSpreadsheet();
+
+  var existing = ScriptApp.getProjectTriggers();
+  for (var i = 0; i < existing.length; i++) {
+    var handler = existing[i].getHandlerFunction();
+    if (handler === "onChangeHandler" || handler === "onEditInstallable") {
+      ScriptApp.deleteTrigger(existing[i]);
+    }
+  }
+
+  ScriptApp.newTrigger("onChangeHandler")
+    .forSpreadsheet(ss)
+    .onChange()
+    .create();
+
+  ScriptApp.newTrigger("onEditInstallable")
+    .forSpreadsheet(ss)
+    .onEdit()
+    .create();
+
+  Logger.log("Trigger berhasil dipasang! onChange + onEdit installable.");
+}
+
+// ============================================================
+// Installable onEdit: sama seperti onEdit tapi bisa akses lebih
+// ============================================================
+function onEditInstallable(e) {
+  try {
+    var sheet = e.range.getSheet();
+    if (sheet.getName() !== SHEET_NAME) return;
+    if (e.range.getColumn() !== CHECK_IN_COL) return;
+    if (e.range.getRow() <= HEADER_ROW) return;
+
+    var numRows = e.range.getNumRows();
+    for (var i = 0; i < numRows; i++) {
+      var row = e.range.getRow() + i;
+      var raw = sheet.getRange(row, CHECK_IN_COL).getDisplayValue();
+      var tempat = getTempatCheckIn(raw);
+      sheet.getRange(row, TEMPAT_COL).setValue(tempat);
+    }
+  } catch (err) {
+    Logger.log("onEditInstallable error: " + err.message);
+  }
+}
+
+// ============================================================
+// Hapus semua trigger yang terpasang
+// ============================================================
+function hapusTrigger() {
+  var triggers = ScriptApp.getProjectTriggers();
+  for (var i = 0; i < triggers.length; i++) {
+    ScriptApp.deleteTrigger(triggers[i]);
+  }
+  Logger.log("Semua trigger telah dihapus. Total: " + triggers.length);
 }
 
 // ============================================================
@@ -235,7 +332,11 @@ function testKlasifikasi() {
 function onOpen() {
   SpreadsheetApp.getUi()
     .createMenu("Otomasi Absensi")
-    .addItem("Isi Tempat Check In", "klasifikasiTempatCheckIn")
+    .addItem("Isi Tempat Check In (Batch)", "klasifikasiTempatCheckIn")
+    .addSeparator()
+    .addItem("Pasang Trigger Otomatis", "pasangTrigger")
+    .addItem("Hapus Trigger", "hapusTrigger")
+    .addSeparator()
     .addItem("Tes Klasifikasi", "testKlasifikasi")
     .addItem("Debug Baris Nov 19", "debugRows")
     .addToUi();
