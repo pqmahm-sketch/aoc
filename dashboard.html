@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AOC 2026 Attendance Tracker</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#eeece6;font-family:'Inter',system-ui,sans-serif;color:#1a1a1a}
+h1,h2,h3,h4,p{margin:0}
+.k{font-family:'JetBrains Mono',monospace}
+.shell{max-width:1320px;margin:0 auto;padding:22px}
+.card{background:#fbfaf7;border-radius:14px;box-shadow:0 1px 0 rgba(0,0,0,.04),0 20px 50px -20px rgba(0,0,0,.15);padding:22px}
+
+/* top bar */
+.top{display:flex;align-items:center;justify-content:space-between;padding:6px 6px 22px;border-bottom:1px solid #ececea;margin-bottom:22px;gap:16px;flex-wrap:wrap}
+.logo{display:flex;align-items:center;gap:14px}
+.logo .mark{width:56px;height:56px;display:grid;place-items:center;flex:none}
+.logo .mark img{width:100%;height:100%;object-fit:contain}
+.logo h1{font-size:22px;font-weight:700;letter-spacing:-.01em}
+.logo .sub{font-size:11px;color:#8a8a8a;letter-spacing:.14em;text-transform:uppercase;margin-top:2px}
+.cutoff{text-align:right;font-size:11px;color:#8a8a8a}
+.cutoff .val{font-family:'JetBrains Mono',monospace;font-size:13px;color:#1a1a1a;font-weight:600;margin-top:3px}
+.refresh-dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:#1e7a3a;margin-right:6px;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:.4}50%{opacity:1}}
+
+/* filters */
+.filters{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:22px}
+.filter{position:relative;background:#fff;border:1px solid #ececea;border-radius:10px;padding:10px 12px;display:flex;align-items:center;gap:10px;cursor:pointer;transition:border-color .15s}
+.filter:hover{border-color:#c8c8c5}
+.filter .ico{width:32px;height:32px;border-radius:8px;background:#f4f2ec;display:grid;place-items:center;color:#7a2020;flex:none}
+.filter .body{flex:1;min-width:0}
+.filter .lbl{font-size:10px;font-weight:600;letter-spacing:.1em;color:#8a8a8a;text-transform:uppercase}
+.filter select{appearance:none;-webkit-appearance:none;background:transparent;border:none;font:600 13px 'Inter',sans-serif;color:#1a1a1a;width:100%;padding:2px 0;cursor:pointer;outline:none}
+.filter .chev{color:#a0a0a0;flex:none}
+
+/* summary */
+.summary{display:grid;grid-template-columns:auto 1fr 1fr;gap:12px;padding:16px;background:#fff;border:1px solid #ececea;border-radius:12px;margin-bottom:18px}
+.sum-brand{background:#1a1a1a;color:#fff;border-radius:10px;padding:16px;display:flex;flex-direction:column;justify-content:space-between;min-width:120px}
+.sum-brand .lbl{font-size:10px;letter-spacing:.14em;font-weight:600;opacity:.6;text-transform:uppercase}
+.sum-brand .val{font-family:'JetBrains Mono',monospace;font-size:26px;font-weight:700;margin-top:6px}
+.sum-brand .sub{font-size:10px;opacity:.5;margin-top:2px;letter-spacing:.08em;text-transform:uppercase}
+.sum-metric{border-radius:10px;padding:14px;display:flex;flex-direction:column;justify-content:space-between}
+.sum-metric.in{background:#e6f4ea}
+.sum-metric.out{background:#fde8e8}
+.sum-metric .lbl{font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase}
+.sum-metric.in .lbl{color:#1e7a3a}
+.sum-metric.out .lbl{color:#b42318}
+.sum-metric .val{font-family:'JetBrains Mono',monospace;font-size:32px;font-weight:700;line-height:1;margin-top:8px}
+.sum-metric .foot{font-size:10.5px;margin-top:6px}
+.sum-metric.in .foot{color:#1e7a3a}
+.sum-metric.out .foot{color:#b42318}
+
+/* main grid */
+.main{display:grid;grid-template-columns:1fr 1.05fr;gap:18px;margin-bottom:18px}
+
+/* chart */
+.chart-card{background:#fff;border:1px solid #ececea;border-radius:12px;padding:16px}
+.chart-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
+.chart-head h3{font-size:13px;font-weight:700;letter-spacing:.04em;text-transform:uppercase}
+.legend{display:flex;gap:14px;font-size:11px;color:#6b6b6b}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend .sw{width:10px;height:10px;border-radius:2px;display:inline-block}
+.bars{display:flex;justify-content:space-around;align-items:flex-end;height:200px;padding:0 8px;border-bottom:1px solid #ececea;position:relative}
+.bars::before{content:'';position:absolute;left:0;right:0;top:33%;border-top:1px dashed #ececea}
+.bars::after{content:'';position:absolute;left:0;right:0;top:66%;border-top:1px dashed #ececea}
+.bar-group{display:flex;align-items:flex-end;gap:6px;position:relative;z-index:1}
+.bar{width:34px;border-radius:4px 4px 0 0;position:relative;display:flex;justify-content:center;align-items:flex-start;padding-top:4px;font-family:'JetBrains Mono',monospace;font-size:10.5px;font-weight:700;color:#fff;min-height:4px}
+.bar-target{background:#7a2020}
+.bar-actual{background:#3a3a3a}
+.bar-labels{display:flex;justify-content:space-around;margin-top:8px}
+.bar-labels div{font-size:10.5px;font-weight:600;letter-spacing:.08em;color:#4a4a4a;text-transform:uppercase;text-align:center;flex:1}
+
+/* tables */
+.detail-card{background:#fff;border:1px solid #ececea;border-radius:12px;overflow:hidden}
+.detail-head{padding:14px 16px;border-bottom:1px solid #ececea;display:flex;justify-content:space-between;align-items:center}
+.detail-head h3{font-size:13px;font-weight:700;letter-spacing:.04em;text-transform:uppercase}
+.detail-tools{display:flex;gap:8px}
+.icon-btn{width:28px;height:28px;border-radius:6px;background:#f4f2ec;border:1px solid #ececea;display:grid;place-items:center;color:#6b6b6b;cursor:pointer}
+.tbl-wrap{overflow-x:auto}
+.tbl{width:100%;border-collapse:collapse;font-size:12px}
+.tbl th{text-align:left;padding:10px 12px;font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#8a8a8a;background:#f7f5ef;border-bottom:1px solid #ececea;white-space:nowrap}
+.tbl td{padding:10px 12px;border-bottom:1px solid #f2efea;white-space:nowrap}
+.tbl tr:last-child td{border-bottom:none}
+.tbl .num{font-family:'JetBrains Mono',monospace;font-weight:500}
+.tbl .idx{color:#a0a0a0;width:24px}
+.tbl .country{font-weight:500}
+.tbl tr.zebra td{background:#fbfaf7}
+.tbl-foot{display:flex;justify-content:space-between;padding:10px 12px;font-size:11px;color:#6b6b6b;background:#f7f5ef;border-top:1px solid #ececea}
+.tbl-foot .k{font-weight:600;color:#1a1a1a}
+.progress{display:flex;align-items:center;gap:8px}
+.progress .bar-wrap{flex:1;height:5px;background:#f0eee9;border-radius:3px;overflow:hidden;min-width:40px}
+.progress .fill{height:100%;background:#7a2020;border-radius:3px}
+.progress .pct{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;color:#1a1a1a;min-width:32px;text-align:right}
+.pill-status{font-size:10.5px;font-weight:600;padding:3px 8px;border-radius:4px;letter-spacing:.04em}
+.status-hadir{background:#e6f4ea;color:#1e7a3a}
+.status-tidak{background:#fde8e8;color:#b42318}
+
+/* loading overlay */
+.loading-overlay{position:fixed;inset:0;background:rgba(238,236,230,.85);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:999;transition:opacity .3s}
+.loading-overlay.hidden{opacity:0;pointer-events:none}
+.spinner{width:36px;height:36px;border:3px solid #ececea;border-top-color:#7a2020;border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-overlay p{margin-top:14px;font-size:13px;color:#6b6b6b;font-weight:500}
+.error-banner{background:#fde8e8;color:#b42318;padding:10px 16px;border-radius:8px;font-size:12px;font-weight:500;margin-bottom:18px;display:none;align-items:center;gap:8px}
+.error-banner.show{display:flex}
+
+/* ======== TABLET ======== */
+@media (max-width:1024px){
+  .shell{padding:18px}
+  .filters{grid-template-columns:repeat(2,1fr)}
+  .filters .filter:nth-child(5){grid-column:span 2}
+  .summary{grid-template-columns:auto 1fr 1fr}
+  .sum-brand .val{font-size:22px}
+  .sum-metric .val{font-size:24px}
+  .main{grid-template-columns:1fr 1fr}
+  .logo h1{font-size:17px}
+}
+
+/* ======== MOBILE ======== */
+@media (max-width:640px){
+  body{background:#eeece6}
+  .shell{padding:14px}
+  .card{padding:14px;border-radius:12px}
+  .top{padding-bottom:14px;margin-bottom:14px;gap:10px}
+  .logo .mark{width:40px;height:40px}
+  .logo h1{font-size:15px}
+  .logo .sub{font-size:9.5px}
+  .cutoff{text-align:left;font-size:10px}
+  .cutoff .val{font-size:11px}
+
+  .filters{grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:14px}
+  .filters .filter:nth-child(5){grid-column:span 2}
+  .filter{padding:8px 10px;gap:8px}
+  .filter .ico{width:26px;height:26px}
+  .filter .lbl{font-size:9px}
+  .filter select{font-size:11.5px}
+
+  /* mobile summary becomes hero */
+  .summary{display:block;background:#1a1a1a;color:#fff;border:none;padding:14px;border-radius:12px;margin-bottom:12px}
+  .summary .sum-brand{background:transparent;padding:0;min-width:0;flex-direction:row;align-items:baseline;gap:10px;margin-bottom:14px}
+  .summary .sum-brand>div:first-child{display:flex;align-items:baseline;gap:10px}
+  .summary .sum-brand .val{font-size:22px;margin:0;order:-1}
+  .summary .sum-brand .lbl{font-size:9.5px}
+  .summary .sum-brand .sub{display:none}
+  .sum-metric{display:inline-flex;width:calc(50% - 5px);vertical-align:top;padding:0;background:transparent !important}
+  .sum-metric.in{margin-right:8px}
+  .sum-metric .lbl{opacity:.6;color:#fff !important;font-size:9px}
+  .sum-metric .val{font-size:30px;color:#fff}
+  .sum-metric.in .val{color:#7fd69a}
+  .sum-metric.out .val{color:#f2a4a4}
+  .sum-metric .foot{color:rgba(255,255,255,.6) !important;font-size:10px}
+
+  .main{grid-template-columns:1fr;gap:12px;margin-bottom:12px}
+
+  /* chart becomes horizontal rows */
+  .chart-card .bars,.chart-card .bar-labels,.chart-card .legend{display:none}
+  .chart-card .m-bars{display:flex}
+  .m-bars{display:none;flex-direction:column;gap:12px}
+  .m-bar-row .top{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px}
+  .m-bar-row .name{font-size:11.5px;font-weight:600}
+  .m-bar-row .num{font-family:'JetBrains Mono',monospace;font-size:11px}
+  .m-bar-row .num .actual{color:#1a1a1a;font-weight:700}
+  .m-bar-row .num .sep{color:#c8c8c5;margin:0 4px}
+  .m-bar-row .num .target{color:#8a8a8a}
+  .m-bar-row .num .pct{color:#7a2020;font-weight:700;margin-left:6px}
+  .m-bar-row .track{height:8px;background:#f0eee9;border-radius:4px;overflow:hidden}
+  .m-bar-row .fill{height:100%;background:#7a2020;border-radius:4px}
+
+  /* country mobile */
+  .country-table-wrap{max-height:235px;overflow-y:auto}
+  .tbl th:nth-child(1),.tbl td:nth-child(1){display:none} /* hide # */
+
+  /* participant detail: list rows */
+  .participant-wrap.collapsed .m-detail-row:nth-child(n+6){display:none}
+  .participant-wrap.expanded{max-height:360px;overflow-y:auto}
+  .m-detail-row{padding:12px 0;border-bottom:1px solid #f2efea}
+  .m-detail-row:last-child{border-bottom:none}
+  .m-detail-row .l1{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px}
+  .m-detail-row .name{font-size:12.5px;font-weight:600}
+  .m-detail-row .l2{display:flex;flex-wrap:wrap;gap:6px;font-size:10.5px;color:#6b6b6b;font-family:'JetBrains Mono',monospace}
+  .m-detail-row .l2 .dot{color:#c8c8c5}
+  .detail-card .tbl-wrap{display:none}
+  .detail-card .mobile-list{display:block}
+  .mobile-list{display:none;padding:4px 14px 14px}
+  .see-all{text-align:center;font-size:10.5px;color:#7a2020;font-weight:600;letter-spacing:.04em;cursor:pointer;padding:10px;background:#f7f5ef;border-top:1px solid #ececea}
+}
+@media (min-width:641px){
+  .mobile-list,.m-bars,.see-all{display:none !important}
+}
+</style>
+</head>
+<body>
+
+<div class="loading-overlay" id="loading">
+  <div class="spinner"></div>
+  <p>Memuat data dari spreadsheet...</p>
+</div>
+
+<div class="shell">
+<div class="card">
+
+  <div class="top">
+    <div class="logo">
+      <div class="mark"><img src="logo.png" alt="AOC 2026"></div>
+      <div>
+        <h1>AOC 2026 Attendance Tracker</h1>
+        <div class="sub">Live Dashboard · Motorcycle Technician Skill Contest</div>
+      </div>
+    </div>
+    <div class="cutoff"><span class="refresh-dot"></span>Data cutoff
+      <div class="val" id="cutoff-time">—</div>
+    </div>
+  </div>
+
+  <!-- ERROR BANNER -->
+  <div class="error-banner" id="error-banner">
+    <span>⚠</span>
+    <span id="error-msg">Gagal memuat data.</span>
+  </div>
+
+  <!-- FILTERS -->
+  <div class="filters">
+    <label class="filter">
+      <div class="ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg></div>
+      <div class="body">
+        <div class="lbl">Participant Category</div>
+        <select id="filter-category" data-filter="category"><option value="">All categories</option></select>
+      </div>
+      <div class="chev">▾</div>
+    </label>
+    <label class="filter">
+      <div class="ico">◧</div>
+      <div class="body">
+        <div class="lbl">Agenda</div>
+        <select id="filter-agenda" data-filter="agenda"><option value="">All agendas</option></select>
+      </div>
+      <div class="chev">▾</div>
+    </label>
+    <label class="filter">
+      <div class="ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s-7-7.5-7-13a7 7 0 0 1 14 0c0 5.5-7 13-7 13z"/><circle cx="12" cy="9" r="2.5"/></svg></div>
+      <div class="body">
+        <div class="lbl">Location</div>
+        <select id="filter-location" data-filter="location"><option value="">All locations</option></select>
+      </div>
+      <div class="chev">▾</div>
+    </label>
+    <label class="filter">
+      <div class="ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg></div>
+      <div class="body">
+        <div class="lbl">Date</div>
+        <select id="filter-date" data-filter="date"><option value="">All dates</option></select>
+      </div>
+      <div class="chev">▾</div>
+    </label>
+    <label class="filter">
+      <div class="ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 17V7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v10"/><path d="M4 17h16v2a1 1 0 0 1-1 1h-1a1 1 0 0 1-1-1v-2M4 17v2a1 1 0 0 0 1 1h1a1 1 0 0 0 1-1v-2M4 10h16"/><circle cx="8" cy="14" r="1.2"/><circle cx="16" cy="14" r="1.2"/></svg></div>
+      <div class="body">
+        <div class="lbl">Bus Number</div>
+        <select id="filter-bus" data-filter="bus"><option value="">All buses</option></select>
+      </div>
+      <div class="chev">▾</div>
+    </label>
+  </div>
+
+  <!-- SUMMARY -->
+  <div class="summary">
+    <div class="sum-brand">
+      <div>
+        <div class="lbl">Register</div>
+        <div class="val" id="sum-register">0</div>
+      </div>
+      <div class="sub">Total participant</div>
+    </div>
+    <div class="sum-metric in">
+      <div class="lbl">Checked in</div>
+      <div class="val" id="sum-in">0</div>
+      <div class="foot" id="sum-in-foot">—</div>
+    </div>
+    <div class="sum-metric out">
+      <div class="lbl">Not checked in</div>
+      <div class="val" id="sum-out">0</div>
+      <div class="foot" id="sum-out-foot">—</div>
+    </div>
+  </div>
+
+  <!-- MAIN -->
+  <div class="main">
+    <div class="chart-card">
+      <div class="chart-head">
+        <h3>Overview Attendance by Agenda</h3>
+        <div class="legend">
+          <span><span class="sw" style="background:#7a2020"></span>Target</span>
+          <span><span class="sw" style="background:#3a3a3a"></span>Actual</span>
+        </div>
+      </div>
+      <div class="bars" id="chart-bars"></div>
+      <div class="bar-labels" id="chart-labels"></div>
+      <div class="m-bars" id="chart-mobile"></div>
+    </div>
+
+    <div class="detail-card">
+      <div class="detail-head">
+        <h3>Tracker by Country</h3>
+        <div class="detail-tools"><div class="icon-btn" title="Sort">⇅</div></div>
+      </div>
+      <div class="country-table-wrap">
+        <div class="tbl-wrap">
+          <table class="tbl">
+            <thead><tr><th class="idx">#</th><th>Country</th><th class="num">Target</th><th class="num">Checked in</th><th style="width:34%">Achievement</th></tr></thead>
+            <tbody id="country-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="tbl-foot"><div>Total · <span class="k" id="country-count">0 countries</span></div><div class="k" id="country-foot">0 · 0 · 0%</div></div>
+    </div>
+  </div>
+
+  <!-- PARTICIPANT DETAIL -->
+  <div class="detail-card">
+    <div class="detail-head">
+      <h3>Participant Detail</h3>
+      <div class="detail-tools">
+        <div class="icon-btn" title="Search">⌕</div>
+        <div class="icon-btn" title="Sort">⇅</div>
+        <div class="icon-btn" title="Download" id="btn-download">⤓</div>
+      </div>
+    </div>
+    <div class="tbl-wrap">
+      <table class="tbl">
+        <thead><tr><th class="idx">#</th><th>Check-in time</th><th>Name</th><th>Country</th><th>Category</th><th>Seat</th><th>Agenda</th><th>Bus</th><th>Check-in Point</th><th>Status</th></tr></thead>
+        <tbody id="participant-tbody"></tbody>
+      </table>
+    </div>
+    <div class="mobile-list participant-wrap collapsed" id="participant-mobile"></div>
+    <div class="see-all" id="see-all-btn">See all ▾</div>
+    <div class="tbl-foot"><div id="pt-foot-1">Showing 0 of 0</div><div id="pt-foot-2">—</div></div>
+  </div>
+
+</div>
+</div>
+
+<script>
+/* ============================================================
+   KONFIGURASI — GANTI URL DI BAWAH INI
+   ============================================================
+   Setelah deploy dashboard_api.gs sebagai Web App,
+   paste URL-nya di sini (contoh format):
+   https://script.google.com/macros/s/AKfycb.../exec
+   ============================================================ */
+var API_URL = "PASTE_URL_WEB_APP_DISINI";
+
+var REFRESH_INTERVAL = 30000; // refresh tiap 30 detik (dalam milidetik)
+/* ============================================================ */
+
+var STATE = { raw: null, filters: { category: "", agenda: "", location: "", date: "", bus: "" } };
+
+function uniqueSorted(arr, key) {
+  return [...new Set(arr.map(function(x) { return x[key]; }).filter(Boolean))].sort();
+}
+
+function populateFilters(data) {
+  var p = data.participants;
+  fillSelect("filter-category", uniqueSorted(p, "category"));
+  fillSelect("filter-agenda",   uniqueSorted(p, "agenda"));
+  fillSelect("filter-location", uniqueSorted(p, "checkinPoint"));
+  fillSelect("filter-date",     uniqueSorted(p, "date"));
+  fillSelect("filter-bus",      uniqueSorted(p, "bus"));
+}
+
+function fillSelect(id, values) {
+  var sel = document.getElementById(id);
+  var firstText = sel.querySelector('option').textContent;
+  var currentVal = sel.value;
+  sel.innerHTML = "";
+  var def = document.createElement('option');
+  def.value = "";
+  def.textContent = firstText;
+  sel.appendChild(def);
+  values.forEach(function(v) {
+    var o = document.createElement('option');
+    o.value = v;
+    o.textContent = v;
+    if (v === currentVal) o.selected = true;
+    sel.appendChild(o);
+  });
+}
+
+function applyFilters(participants) {
+  var f = STATE.filters;
+  return participants.filter(function(p) {
+    return (!f.category || p.category === f.category) &&
+           (!f.agenda   || p.agenda === f.agenda) &&
+           (!f.location || p.checkinPoint === f.location) &&
+           (!f.date     || p.date === f.date) &&
+           (!f.bus      || p.bus === f.bus);
+  });
+}
+
+function render() {
+  var d = STATE.raw;
+  if (!d) return;
+  document.getElementById('cutoff-time').textContent = d.cutoff || "—";
+  var filtered = applyFilters(d.participants);
+
+  // Summary
+  var total = filtered.length;
+  var inn = filtered.filter(function(p) { return p.status === "HADIR"; }).length;
+  var out = total - inn;
+  var pct = total ? (inn / total * 100) : 0;
+  document.getElementById('sum-register').textContent = total;
+  document.getElementById('sum-in').textContent = inn;
+  document.getElementById('sum-out').textContent = out;
+  document.getElementById('sum-in-foot').textContent  = pct.toFixed(1) + "% of register";
+  document.getElementById('sum-out-foot').textContent = (100 - pct).toFixed(1) + "% remaining";
+
+  renderChart(filtered, d.agendaTargets || {});
+  renderCountry(filtered, d.countryTargets || {});
+  renderParticipants(filtered);
+}
+
+function renderChart(filtered, targets) {
+  var agendas = Object.keys(targets).length ? Object.keys(targets) : [...new Set(filtered.map(function(p) { return p.agenda; }))];
+  var bars = document.getElementById('chart-bars');
+  var labels = document.getElementById('chart-labels');
+  var mobile = document.getElementById('chart-mobile');
+  var maxVal = Math.max(1, ...agendas.map(function(a) {
+    return Math.max(targets[a] || 0, filtered.filter(function(p) { return p.agenda === a && p.status === "HADIR"; }).length);
+  }));
+  bars.innerHTML = ""; labels.innerHTML = ""; mobile.innerHTML = "";
+  agendas.forEach(function(a) {
+    var t = targets[a] || 0;
+    var act = filtered.filter(function(p) { return p.agenda === a && p.status === "HADIR"; }).length;
+    var hT = Math.round((t / maxVal) * 180);
+    var hA = Math.round((act / maxVal) * 180);
+    bars.insertAdjacentHTML('beforeend',
+      '<div class="bar-group">' +
+        '<div class="bar bar-target" style="height:' + hT + 'px">' + (t || "") + '</div>' +
+        '<div class="bar bar-actual" style="height:' + hA + 'px">' + (act || "") + '</div>' +
+      '</div>');
+    labels.insertAdjacentHTML('beforeend', '<div>' + a + ' · ' + act + '/' + t + '</div>');
+    var pct = t ? (act / t * 100).toFixed(1) : "0.0";
+    mobile.insertAdjacentHTML('beforeend',
+      '<div class="m-bar-row">' +
+        '<div class="top"><div class="name">' + a + '</div><div class="num"><span class="actual">' + act + '</span><span class="sep">/</span><span class="target">' + t + '</span><span class="pct">' + pct + '%</span></div></div>' +
+        '<div class="track"><div class="fill" style="width:' + Math.min(100, parseFloat(pct)) + '%"></div></div>' +
+      '</div>');
+  });
+}
+
+function renderCountry(filtered, targets) {
+  var countries = Object.keys(targets).length ? Object.keys(targets) : [...new Set(filtered.map(function(p) { return p.country; }))];
+  var rows = countries.map(function(c) {
+    var t = targets[c] || 0;
+    var act = filtered.filter(function(p) { return p.country === c && p.status === "HADIR"; }).length;
+    var pct = t ? (act / t * 100) : 0;
+    return { c: c, t: t, act: act, pct: pct };
+  }).sort(function(a, b) { return b.pct - a.pct; });
+
+  var tbody = document.getElementById('country-tbody');
+  tbody.innerHTML = rows.map(function(r, i) {
+    return '<tr class="' + (i % 2 ? 'zebra' : '') + '">' +
+      '<td class="idx">' + (i + 1) + '</td>' +
+      '<td class="country">' + r.c + '</td>' +
+      '<td class="num">' + r.t + '</td>' +
+      '<td class="num">' + r.act + '</td>' +
+      '<td><div class="progress"><div class="bar-wrap"><div class="fill" style="width:' + Math.min(100, r.pct) + '%"></div></div><div class="pct">' + r.pct.toFixed(0) + '%</div></div></td>' +
+    '</tr>';
+  }).join('');
+  document.getElementById('country-count').textContent = rows.length + ' countries';
+  var totT = rows.reduce(function(s, r) { return s + r.t; }, 0);
+  var totA = rows.reduce(function(s, r) { return s + r.act; }, 0);
+  document.getElementById('country-foot').textContent = totT + ' · ' + totA + ' · ' + (totT ? Math.round(totA / totT * 100) : 0) + '%';
+}
+
+function renderParticipants(filtered) {
+  var sorted = filtered.slice().sort(function(a, b) {
+    if (a.status === "HADIR" && b.status !== "HADIR") return -1;
+    if (a.status !== "HADIR" && b.status === "HADIR") return 1;
+    if (a.checkinTime && b.checkinTime) return b.checkinTime.localeCompare(a.checkinTime);
+    return a.name.localeCompare(b.name);
+  });
+
+  var tbody = document.getElementById('participant-tbody');
+  tbody.innerHTML = sorted.map(function(p, i) {
+    var statusClass = p.status === "HADIR" ? "status-hadir" : "status-tidak";
+    return '<tr class="' + (i % 2 ? 'zebra' : '') + '">' +
+      '<td class="idx">' + (i + 1) + '</td>' +
+      '<td class="num">' + (p.checkinTime || "—") + '</td>' +
+      '<td>' + p.name + '</td>' +
+      '<td>' + p.country + '</td>' +
+      '<td>' + p.category + '</td>' +
+      '<td class="num">' + p.seat + '</td>' +
+      '<td>' + p.agenda + '</td>' +
+      '<td class="num">' + (p.bus || "—") + '</td>' +
+      '<td>' + (p.checkinPoint || "—") + '</td>' +
+      '<td><span class="pill-status ' + statusClass + '">' + p.status + '</span></td>' +
+    '</tr>';
+  }).join('');
+
+  // mobile list
+  var mob = document.getElementById('participant-mobile');
+  mob.innerHTML = sorted.map(function(p) {
+    var sc = p.status === "HADIR" ? "status-hadir" : "status-tidak";
+    return '<div class="m-detail-row">' +
+      '<div class="l1"><div class="name">' + p.name + '</div><span class="pill-status ' + sc + '">' + p.status + '</span></div>' +
+      '<div class="l2"><span>' + (p.checkinTime || "—").slice(0, 16) + '</span><span class="dot">·</span><span>' + p.country + '</span><span class="dot">·</span><span>Seat ' + p.seat + '</span></div>' +
+      '<div class="l2" style="margin-top:2px"><span>' + p.agenda + '</span><span class="dot">·</span><span>' + (p.bus || "—") + '</span><span class="dot">·</span><span>' + (p.checkinPoint || "—") + '</span></div>' +
+    '</div>';
+  }).join('');
+
+  var hadirCount = sorted.filter(function(p) { return p.status === "HADIR"; }).length;
+  document.getElementById('pt-foot-1').textContent = 'Showing ' + sorted.length + ' of ' + filtered.length + ' participants';
+  document.getElementById('pt-foot-2').textContent = hadirCount + ' checked-in · ' + (filtered.length - hadirCount) + ' not checked-in';
+}
+
+// Download CSV
+document.getElementById('btn-download').addEventListener('click', function() {
+  if (!STATE.raw) return;
+  var filtered = applyFilters(STATE.raw.participants);
+  var header = "No,Check-in Time,Name,Country,Category,Seat,Agenda,Bus,Check-in Point,Status\n";
+  var csv = header + filtered.map(function(p, i) {
+    return [i + 1, p.checkinTime || "", '"' + p.name + '"', p.country, p.category, p.seat, p.agenda, p.bus || "", p.checkinPoint || "", p.status].join(",");
+  }).join("\n");
+  var blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8" });
+  var a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "aoc2026_attendance_" + new Date().toISOString().slice(0, 10) + ".csv";
+  a.click();
+});
+
+// Filter wiring
+document.querySelectorAll('[data-filter]').forEach(function(sel) {
+  sel.addEventListener('change', function(e) {
+    STATE.filters[sel.dataset.filter] = e.target.value;
+    render();
+  });
+});
+
+// See-all toggle (mobile)
+document.getElementById('see-all-btn').addEventListener('click', function() {
+  var w = document.getElementById('participant-mobile');
+  var expanded = w.classList.toggle('expanded');
+  w.classList.toggle('collapsed', !expanded);
+  document.getElementById('see-all-btn').textContent = expanded ? "Show less ▴" : "See all ▾";
+});
+
+// Fetch data from Apps Script web app
+async function fetchData() {
+  var response = await fetch(API_URL);
+  if (!response.ok) throw new Error("HTTP " + response.status);
+  return response.json();
+}
+
+function showError(msg) {
+  var banner = document.getElementById('error-banner');
+  document.getElementById('error-msg').textContent = msg;
+  banner.classList.add('show');
+}
+
+function hideError() {
+  document.getElementById('error-banner').classList.remove('show');
+}
+
+async function loadData(isInitial) {
+  try {
+    var data = await fetchData();
+    if (data.error) {
+      showError("Error dari API: " + data.error);
+      return;
+    }
+    hideError();
+    STATE.raw = data;
+    if (isInitial) populateFilters(data);
+    render();
+  } catch (err) {
+    showError("Gagal memuat data: " + err.message);
+  } finally {
+    if (isInitial) {
+      document.getElementById('loading').classList.add('hidden');
+    }
+  }
+}
+
+// Boot
+(async function() {
+  if (API_URL === "PASTE_URL_WEB_APP_DISINI") {
+    document.getElementById('loading').classList.add('hidden');
+    showError("API_URL belum dikonfigurasi. Buka dashboard.html dan ganti variabel API_URL dengan URL web app dari Apps Script.");
+    return;
+  }
+
+  await loadData(true);
+
+  // Auto-refresh
+  setInterval(function() { loadData(false); }, REFRESH_INTERVAL);
+})();
+</script>
+</body>
+</html>
