@@ -6,19 +6,34 @@
  * atau gunakan onEdit trigger untuk otomatis mengisi saat data masuk.
  */
 
+var SPREADSHEET_ID = "1S3nAnX5ije6prGTwnJ7sZsdYmQtu7q8g";
 var SHEET_NAME = "M.LOOKER";
 var CHECK_IN_COL = 12;     // Kolom L (CHECK IN)
 var TEMPAT_COL = 13;       // Kolom M (TEMPAT CHECK IN)
 var HEADER_ROW = 1;
 
 // ============================================================
+// Helper: buka spreadsheet
+// ============================================================
+function getSpreadsheet() {
+  try {
+    return SpreadsheetApp.openById(SPREADSHEET_ID);
+  } catch (e) {
+    Logger.log("openById gagal: " + e.message);
+  }
+  var active = SpreadsheetApp.getActiveSpreadsheet();
+  if (active) return active;
+  throw new Error("Spreadsheet tidak ditemukan. Pastikan SPREADSHEET_ID benar: " + SPREADSHEET_ID);
+}
+
+// ============================================================
 // Fungsi batch: proses semua baris sekaligus
 // ============================================================
 function klasifikasiTempatCheckIn() {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var ss = getSpreadsheet();
   var sheet = ss.getSheetByName(SHEET_NAME);
   if (!sheet) {
-    SpreadsheetApp.getUi().alert("Sheet '" + SHEET_NAME + "' tidak ditemukan.");
+    Logger.log("Sheet '" + SHEET_NAME + "' tidak ditemukan.");
     return;
   }
 
@@ -26,7 +41,7 @@ function klasifikasiTempatCheckIn() {
   if (lastRow <= HEADER_ROW) return;
 
   var dataRows = lastRow - HEADER_ROW;
-  var checkInValues = sheet.getRange(HEADER_ROW + 1, CHECK_IN_COL, dataRows, 1).getValues();
+  var checkInValues = sheet.getRange(HEADER_ROW + 1, CHECK_IN_COL, dataRows, 1).getDisplayValues();
   var tempatValues = [];
 
   for (var i = 0; i < checkInValues.length; i++) {
@@ -38,7 +53,7 @@ function klasifikasiTempatCheckIn() {
 }
 
 // ============================================================
-// Trigger onEdit: otomatis isi saat kolom L diubah
+// Trigger onEdit: otomatis isi saat kolom L diubah (manual)
 // ============================================================
 function onEdit(e) {
   var sheet = e.source.getActiveSheet();
@@ -48,44 +63,150 @@ function onEdit(e) {
   if (range.getColumn() !== CHECK_IN_COL) return;
   if (range.getRow() <= HEADER_ROW) return;
 
-  var raw = range.getValue();
+  var raw = range.getDisplayValue();
   var tempat = getTempatCheckIn(raw);
   sheet.getRange(range.getRow(), TEMPAT_COL).setValue(tempat);
+}
+
+// ============================================================
+// Installable trigger: onChange — tangkap perubahan programatik
+// ============================================================
+function onChangeHandler(e) {
+  if (e.changeType !== "EDIT" && e.changeType !== "INSERT_ROW") return;
+
+  var ss = e.source || getSpreadsheet();
+  var sheet = ss.getSheetByName(SHEET_NAME);
+  if (!sheet) return;
+
+  var lastRow = sheet.getLastRow();
+  if (lastRow <= HEADER_ROW) return;
+
+  var dataRows = lastRow - HEADER_ROW;
+  var checkInValues = sheet.getRange(HEADER_ROW + 1, CHECK_IN_COL, dataRows, 1).getDisplayValues();
+  var tempatValues = sheet.getRange(HEADER_ROW + 1, TEMPAT_COL, dataRows, 1).getDisplayValues();
+  var updates = [];
+  var hasUpdate = false;
+
+  for (var i = 0; i < checkInValues.length; i++) {
+    var checkIn = checkInValues[i][0];
+    var current = tempatValues[i][0];
+    var expected = getTempatCheckIn(checkIn);
+
+    if (expected !== current) {
+      updates.push([expected]);
+      hasUpdate = true;
+    } else {
+      updates.push([current]);
+    }
+  }
+
+  if (hasUpdate) {
+    sheet.getRange(HEADER_ROW + 1, TEMPAT_COL, updates.length, 1).setValues(updates);
+  }
+}
+
+// ============================================================
+// Pasang trigger otomatis — jalankan SEKALI saja
+// ============================================================
+function pasangTrigger() {
+  var ss = getSpreadsheet();
+
+  var existing = ScriptApp.getProjectTriggers();
+  for (var i = 0; i < existing.length; i++) {
+    var handler = existing[i].getHandlerFunction();
+    if (handler === "onChangeHandler" || handler === "onEditInstallable") {
+      ScriptApp.deleteTrigger(existing[i]);
+    }
+  }
+
+  ScriptApp.newTrigger("onChangeHandler")
+    .forSpreadsheet(ss)
+    .onChange()
+    .create();
+
+  ScriptApp.newTrigger("onEditInstallable")
+    .forSpreadsheet(ss)
+    .onEdit()
+    .create();
+
+  Logger.log("Trigger berhasil dipasang! onChange + onEdit installable.");
+}
+
+// ============================================================
+// Installable onEdit: sama seperti onEdit tapi bisa akses lebih
+// ============================================================
+function onEditInstallable(e) {
+  try {
+    var sheet = e.range.getSheet();
+    if (sheet.getName() !== SHEET_NAME) return;
+    if (e.range.getColumn() !== CHECK_IN_COL) return;
+    if (e.range.getRow() <= HEADER_ROW) return;
+
+    var numRows = e.range.getNumRows();
+    for (var i = 0; i < numRows; i++) {
+      var row = e.range.getRow() + i;
+      var raw = sheet.getRange(row, CHECK_IN_COL).getDisplayValue();
+      var tempat = getTempatCheckIn(raw);
+      sheet.getRange(row, TEMPAT_COL).setValue(tempat);
+    }
+  } catch (err) {
+    Logger.log("onEditInstallable error: " + err.message);
+  }
+}
+
+// ============================================================
+// Hapus semua trigger yang terpasang
+// ============================================================
+function hapusTrigger() {
+  var triggers = ScriptApp.getProjectTriggers();
+  for (var i = 0; i < triggers.length; i++) {
+    ScriptApp.deleteTrigger(triggers[i]);
+  }
+  Logger.log("Semua trigger telah dihapus. Total: " + triggers.length);
 }
 
 // ============================================================
 // Logika klasifikasi tempat berdasarkan tanggal & waktu
 // ============================================================
 function getTempatCheckIn(rawValue) {
-  if (!rawValue || rawValue === "") return "";
+  if (!rawValue || rawValue === "" || String(rawValue).trim() === "") return "";
 
   var date;
   if (rawValue instanceof Date) {
     date = rawValue;
   } else {
-    date = parseDateString(String(rawValue));
+    date = parseDateString(String(rawValue).trim());
   }
 
   if (!date || isNaN(date.getTime())) return "";
 
   var day = date.getDate();
-  var month = date.getMonth() + 1; // getMonth() 0-indexed
+  var month = date.getMonth() + 1;
   var year = date.getFullYear();
   var timeMin = date.getHours() * 60 + date.getMinutes();
 
   if (month !== 11 || year !== 2026) return "";
   if (day < 17 || day > 20) return "";
 
-  // --- Aturan spesifik tanggal tertentu (prioritas lebih tinggi) ---
+  // 1. LOBBY RENSINDA: 17-20/11/2026, 05:45 - 07:30
+  if (day >= 17 && day <= 20 && timeMin >= 345 && timeMin <= 450) {
+    return "LOBBY RENSINDA";
+  }
+
+  // 2. SRTC: 17-18/11/2026 15:00-17:30, 19/11/2026 21:00-22:30
+  if ((day >= 17 && day <= 18 && timeMin >= 900 && timeMin <= 1050) ||
+      (day === 19 && timeMin >= 1260 && timeMin <= 1350)) {
+    return "SRTC";
+  }
 
   // 3. BALLROOM: 19/11/2026, 14:30 - 18:30
   if (day === 19 && timeMin >= 870 && timeMin <= 1110) {
     return "BALLROOM";
   }
 
-  // 4. WHOOSH PADALARANG: 20/11/2026, 08:45 - 10:00
+  // 4. WHOOSH TEGALLUAR: 20/11/2026, 08:45 - 10:00
   if (day === 20 && timeMin >= 525 && timeMin <= 600) {
-    return "WHOOSH PADALARANG";
+    return "WHOOSH TEGALLUAR";
   }
 
   // 5. WHEELS DAGO: 20/11/2026, 12:30 - 14:30
@@ -108,18 +229,6 @@ function getTempatCheckIn(rawValue) {
     return "WHOOSH KARAWANG";
   }
 
-  // --- Aturan rentang tanggal (prioritas lebih rendah) ---
-
-  // 1. LOBBY RENSINDA: 17-20/11/2026, 05:45 - 07:30
-  if (day >= 17 && day <= 20 && timeMin >= 345 && timeMin <= 450) {
-    return "LOBBY RENSINDA";
-  }
-
-  // 2. SRTC: 17-20/11/2026, 15:00 - 22:30
-  if (day >= 17 && day <= 20 && timeMin >= 900 && timeMin <= 1350) {
-    return "SRTC";
-  }
-
   return "";
 }
 
@@ -127,7 +236,6 @@ function getTempatCheckIn(rawValue) {
 // Parser untuk format tanggal "dd/MM/yyyy HH:mm:ss"
 // ============================================================
 function parseDateString(str) {
-  // Format: "17/11/2026 06:30:00" atau "17/11/2026 6:30"
   var parts = str.split(" ");
   if (parts.length < 2) return null;
 
@@ -138,7 +246,7 @@ function parseDateString(str) {
   if (timeParts.length < 2) return null;
 
   var day = parseInt(dateParts[0], 10);
-  var month = parseInt(dateParts[1], 10) - 1; // Date() bulan 0-indexed
+  var month = parseInt(dateParts[1], 10) - 1;
   var year = parseInt(dateParts[2], 10);
   var hours = parseInt(timeParts[0], 10);
   var minutes = parseInt(timeParts[1], 10);
@@ -148,11 +256,88 @@ function parseDateString(str) {
 }
 
 // ============================================================
+// Debug: log detail parsing untuk baris tertentu
+// ============================================================
+function debugRows() {
+  var ss = getSpreadsheet();
+  var sheet = ss.getSheetByName(SHEET_NAME);
+  var lastRow = sheet.getLastRow();
+  var dataRows = lastRow - HEADER_ROW;
+
+  var displayValues = sheet.getRange(HEADER_ROW + 1, CHECK_IN_COL, dataRows, 1).getDisplayValues();
+  var rawValues = sheet.getRange(HEADER_ROW + 1, CHECK_IN_COL, dataRows, 1).getValues();
+
+  var logs = [];
+  for (var i = 0; i < displayValues.length; i++) {
+    var display = displayValues[i][0];
+    var raw = rawValues[i][0];
+    if (!display || display.trim() === "") continue;
+
+    var isDate = raw instanceof Date;
+    var parsed = isDate ? raw : parseDateString(String(display).trim());
+    if (!parsed || isNaN(parsed.getTime())) continue;
+
+    var day = parsed.getDate();
+    var month = parsed.getMonth() + 1;
+    if (month !== 11 || day !== 19) continue;
+
+    var timeMin = parsed.getHours() * 60 + parsed.getMinutes();
+    var result = getTempatCheckIn(display);
+
+    logs.push(
+      "Row " + (i + 2) +
+      " | display: " + display +
+      " | rawType: " + (isDate ? "Date" : typeof raw) +
+      " | rawToString: " + String(raw) +
+      " | day=" + day + " month=" + month +
+      " | hours=" + parsed.getHours() + " min=" + parsed.getMinutes() +
+      " | timeMin=" + timeMin +
+      " | result: " + result
+    );
+  }
+  Logger.log("=== DEBUG Nov 19 rows ===\n" + logs.join("\n"));
+}
+
+// ============================================================
+// Fungsi tes: jalankan untuk verifikasi logika klasifikasi
+// ============================================================
+function testKlasifikasi() {
+  var testCases = [
+    { input: "17/11/2026 06:00:00", expected: "LOBBY RENSINDA" },
+    { input: "18/11/2026 16:00:00", expected: "SRTC" },
+    { input: "19/11/2026 14:45:59", expected: "BALLROOM" },
+    { input: "19/11/2026 15:30:00", expected: "BALLROOM" },
+    { input: "19/11/2026 18:21:34", expected: "BALLROOM" },
+    { input: "19/11/2026 21:30:00", expected: "SRTC" },
+    { input: "20/11/2026 09:00:00", expected: "WHOOSH TEGALLUAR" },
+    { input: "20/11/2026 13:00:00", expected: "WHEELS DAGO" },
+    { input: "20/11/2026 15:00:00", expected: "TANG. PRAHU" },
+    { input: "20/11/2026 17:00:00", expected: "KARSA LAND" },
+    { input: "20/11/2026 19:30:00", expected: "WHOOSH KARAWANG" }
+  ];
+
+  var results = [];
+  for (var i = 0; i < testCases.length; i++) {
+    var tc = testCases[i];
+    var actual = getTempatCheckIn(tc.input);
+    var status = (actual === tc.expected) ? "OK" : "GAGAL";
+    results.push(status + " | " + tc.input + " | expected: " + tc.expected + " | actual: " + actual);
+  }
+  Logger.log(results.join("\n"));
+}
+
+// ============================================================
 // Menu kustom di spreadsheet
 // ============================================================
 function onOpen() {
   SpreadsheetApp.getUi()
     .createMenu("Otomasi Absensi")
-    .addItem("Isi Tempat Check In", "klasifikasiTempatCheckIn")
+    .addItem("Isi Tempat Check In (Batch)", "klasifikasiTempatCheckIn")
+    .addSeparator()
+    .addItem("Pasang Trigger Otomatis", "pasangTrigger")
+    .addItem("Hapus Trigger", "hapusTrigger")
+    .addSeparator()
+    .addItem("Tes Klasifikasi", "testKlasifikasi")
+    .addItem("Debug Baris Nov 19", "debugRows")
     .addToUi();
 }
