@@ -97,6 +97,14 @@ h1,h2,h3,h4,p{margin:0}
 .status-hadir{background:#e6f4ea;color:#1e7a3a}
 .status-tidak,.status-belum{background:#fde8e8;color:#b42318}
 
+/* scrollable country tracker (6 rows visible) */
+.country-table-wrap{max-height:282px;overflow-y:auto}
+.country-table-wrap .tbl th{position:sticky;top:0;z-index:1}
+
+/* scrollable participant detail (10 rows visible) */
+#participant-tbl-wrap{max-height:446px;overflow-y:auto}
+#participant-tbl-wrap .tbl th{position:sticky;top:0;z-index:1}
+
 /* loading overlay */
 .loading-overlay{position:fixed;inset:0;background:rgba(238,236,230,.85);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:999;transition:opacity .3s}
 .loading-overlay.hidden{opacity:0;pointer-events:none}
@@ -327,7 +335,7 @@ h1,h2,h3,h4,p{margin:0}
         <div class="icon-btn" title="Download" id="btn-download">⤓</div>
       </div>
     </div>
-    <div class="tbl-wrap">
+    <div class="tbl-wrap" id="participant-tbl-wrap">
       <table class="tbl">
         <thead><tr><th class="idx">#</th><th>Check-in time</th><th>Name</th><th>Country</th><th>Category</th><th>Seat</th><th>Agenda</th><th>Bus</th><th>Check-in Point</th><th>Status</th></tr></thead>
         <tbody id="participant-tbody"></tbody>
@@ -428,7 +436,7 @@ function render() {
   document.getElementById('sum-out-foot').textContent = (100 - pct).toFixed(1) + "% remaining";
 
   renderChart(filtered, d.agendaTargets || {});
-  renderCountry(filtered, d.countryTargets || {});
+  renderCountry(filtered);
   renderParticipants(filtered);
 }
 
@@ -461,10 +469,18 @@ function renderChart(filtered, targets) {
   });
 }
 
-function renderCountry(filtered, targets) {
-  var countries = Object.keys(targets).length ? Object.keys(targets) : [...new Set(filtered.map(function(p) { return p.country; }))];
+function renderCountry(filtered) {
+  var seenCN = {};
+  var targets = {};
+  filtered.forEach(function(p) {
+    if (!p.country || !p.name) return;
+    var ck = p.country + "|" + p.name.toLowerCase();
+    if (!seenCN[ck]) { seenCN[ck] = true; targets[p.country] = (targets[p.country] || 0) + 1; }
+  });
+
+  var countries = Object.keys(targets);
   var rows = countries.map(function(c) {
-    var t = targets[c] || 0;
+    var t = targets[c];
     var hadirNames = {};
     filtered.forEach(function(p) {
       if (p.country === c && p.status === "HADIR" && p.name) hadirNames[p.name.toLowerCase()] = true;
