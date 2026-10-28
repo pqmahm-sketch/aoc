@@ -62,7 +62,7 @@ h1,h2,h3,h4,p{margin:0}
 .legend{display:flex;gap:14px;font-size:11px;color:#6b6b6b}
 .legend span{display:inline-flex;align-items:center;gap:6px}
 .legend .sw{width:10px;height:10px;border-radius:2px;display:inline-block}
-.bars{display:flex;justify-content:space-around;align-items:flex-end;height:200px;padding:0 8px;border-bottom:1px solid #ececea;position:relative}
+.bars{display:flex;justify-content:space-around;align-items:flex-end;height:150px;padding:0 8px;border-bottom:1px solid #ececea;position:relative}
 .bars::before{content:'';position:absolute;left:0;right:0;top:33%;border-top:1px dashed #ececea}
 .bars::after{content:'';position:absolute;left:0;right:0;top:66%;border-top:1px dashed #ececea}
 .bar-group{display:flex;align-items:flex-end;gap:6px;position:relative;z-index:1}
@@ -452,8 +452,8 @@ function renderChart(filtered, targets) {
   agendas.forEach(function(a) {
     var t = targets[a] || 0;
     var act = filtered.filter(function(p) { return p.agenda === a && p.status === "HADIR"; }).length;
-    var hT = Math.round((t / maxVal) * 180);
-    var hA = Math.round((act / maxVal) * 180);
+    var hT = Math.round((t / maxVal) * 130);
+    var hA = Math.round((act / maxVal) * 130);
     bars.insertAdjacentHTML('beforeend',
       '<div class="bar-group">' +
         '<div class="bar bar-target" style="height:' + hT + 'px">' + (t || "") + '</div>' +
