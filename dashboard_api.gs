@@ -24,6 +24,7 @@
  *   H  (idx 7)  = Bus Number
  *   I  (idx 8)  = Seat
  *   J  (idx 9)  = Agenda
+ *   K  (idx 10) = Status  (HADIR / BELUM HADIR)
  *   L  (idx 11) = Check-in Time  (dd/MM/yyyy HH:mm:ss)
  *   M  (idx 12) = Check-in Point / Tempat Check In
  * ============================================================
@@ -73,12 +74,17 @@ function doGet(e) {
       if (agenda)  agendaTargets[agenda]   = (agendaTargets[agenda]  || 0) + 1;
 
       var dateOnly = "";
-      var status   = "TIDAK HADIR";
-
       if (checkinRaw !== "") {
-        status = "HADIR";
         var sp = checkinRaw.split(" ");
         if (sp.length >= 1) dateOnly = sp[0];
+      }
+
+      var statusRaw = (r[10] || "").trim();
+      var status;
+      if (statusRaw) {
+        status = statusRaw;
+      } else {
+        status = (checkinRaw !== "" && checkinPoint !== "") ? "HADIR" : "BELUM HADIR";
       }
 
       participants.push({

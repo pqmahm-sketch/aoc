@@ -95,7 +95,7 @@ h1,h2,h3,h4,p{margin:0}
 .progress .pct{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;color:#1a1a1a;min-width:32px;text-align:right}
 .pill-status{font-size:10.5px;font-weight:600;padding:3px 8px;border-radius:4px;letter-spacing:.04em}
 .status-hadir{background:#e6f4ea;color:#1e7a3a}
-.status-tidak{background:#fde8e8;color:#b42318}
+.status-tidak,.status-belum{background:#fde8e8;color:#b42318}
 
 /* loading overlay */
 .loading-overlay{position:fixed;inset:0;background:rgba(238,236,230,.85);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:999;transition:opacity .3s}
@@ -484,7 +484,7 @@ function renderParticipants(filtered) {
 
   var tbody = document.getElementById('participant-tbody');
   tbody.innerHTML = sorted.map(function(p, i) {
-    var statusClass = p.status === "HADIR" ? "status-hadir" : "status-tidak";
+    var statusClass = p.status === "HADIR" ? "status-hadir" : "status-belum";
     return '<tr class="' + (i % 2 ? 'zebra' : '') + '">' +
       '<td class="idx">' + (i + 1) + '</td>' +
       '<td class="num">' + (p.checkinTime || "—") + '</td>' +
@@ -502,7 +502,7 @@ function renderParticipants(filtered) {
   // mobile list
   var mob = document.getElementById('participant-mobile');
   mob.innerHTML = sorted.map(function(p) {
-    var sc = p.status === "HADIR" ? "status-hadir" : "status-tidak";
+    var sc = p.status === "HADIR" ? "status-hadir" : "status-belum";
     return '<div class="m-detail-row">' +
       '<div class="l1"><div class="name">' + p.name + '</div><span class="pill-status ' + sc + '">' + p.status + '</span></div>' +
       '<div class="l2"><span>' + (p.checkinTime || "—").slice(0, 16) + '</span><span class="dot">·</span><span>' + p.country + '</span><span class="dot">·</span><span>Seat ' + p.seat + '</span></div>' +
@@ -572,7 +572,7 @@ async function loadData(isInitial) {
     }
     hideError();
     STATE.raw = data;
-    if (isInitial) populateFilters(data);
+    populateFilters(data);
     render();
   } catch (err) {
     showError("Gagal memuat data: " + err.message);
