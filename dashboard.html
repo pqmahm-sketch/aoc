@@ -356,6 +356,18 @@ var REFRESH_INTERVAL = 30000; // refresh tiap 30 detik (dalam milidetik)
 
 var STATE = { raw: null, filters: { category: "", agenda: "", location: "", date: "", bus: "" } };
 
+function countUniqueNames(arr) {
+  var s = {};
+  arr.forEach(function(x) { if (x.name) s[x.name.toLowerCase()] = true; });
+  return Object.keys(s).length;
+}
+
+function countUniqueHadir(arr) {
+  var s = {};
+  arr.forEach(function(x) { if (x.status === "HADIR" && x.name) s[x.name.toLowerCase()] = true; });
+  return Object.keys(s).length;
+}
+
 function uniqueSorted(arr, key) {
   return [...new Set(arr.map(function(x) { return x[key]; }).filter(Boolean))].sort();
 }
@@ -404,9 +416,9 @@ function render() {
   document.getElementById('cutoff-time').textContent = d.cutoff || "—";
   var filtered = applyFilters(d.participants);
 
-  // Summary
-  var total = filtered.length;
-  var inn = filtered.filter(function(p) { return p.status === "HADIR"; }).length;
+  // Summary — unique participants
+  var total = countUniqueNames(filtered);
+  var inn = countUniqueHadir(filtered);
   var out = total - inn;
   var pct = total ? (inn / total * 100) : 0;
   document.getElementById('sum-register').textContent = total;
@@ -453,7 +465,11 @@ function renderCountry(filtered, targets) {
   var countries = Object.keys(targets).length ? Object.keys(targets) : [...new Set(filtered.map(function(p) { return p.country; }))];
   var rows = countries.map(function(c) {
     var t = targets[c] || 0;
-    var act = filtered.filter(function(p) { return p.country === c && p.status === "HADIR"; }).length;
+    var hadirNames = {};
+    filtered.forEach(function(p) {
+      if (p.country === c && p.status === "HADIR" && p.name) hadirNames[p.name.toLowerCase()] = true;
+    });
+    var act = Object.keys(hadirNames).length;
     var pct = t ? (act / t * 100) : 0;
     return { c: c, t: t, act: act, pct: pct };
   }).sort(function(a, b) { return b.pct - a.pct; });
@@ -510,9 +526,10 @@ function renderParticipants(filtered) {
     '</div>';
   }).join('');
 
-  var hadirCount = sorted.filter(function(p) { return p.status === "HADIR"; }).length;
-  document.getElementById('pt-foot-1').textContent = 'Showing ' + sorted.length + ' of ' + filtered.length + ' participants';
-  document.getElementById('pt-foot-2').textContent = hadirCount + ' checked-in · ' + (filtered.length - hadirCount) + ' not checked-in';
+  var uTotal = countUniqueNames(sorted);
+  var uHadir = countUniqueHadir(sorted);
+  document.getElementById('pt-foot-1').textContent = uTotal + ' participants · ' + sorted.length + ' records';
+  document.getElementById('pt-foot-2').textContent = uHadir + ' checked-in · ' + (uTotal - uHadir) + ' not checked-in';
 }
 
 // Download CSV

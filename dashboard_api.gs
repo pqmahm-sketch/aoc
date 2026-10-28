@@ -43,6 +43,7 @@ function doGet(e) {
     if (lastRow <= 1) {
       return _json({
         cutoff: _cutoff(),
+        uniqueParticipants: 0,
         countryTargets: {},
         agendaTargets: {},
         participants: []
@@ -55,6 +56,7 @@ function doGet(e) {
     var participants = [];
     var countryTargets = {};
     var agendaTargets = {};
+    var seenCountryName = {};
 
     for (var i = 0; i < rows.length; i++) {
       var r = rows[i];
@@ -70,8 +72,14 @@ function doGet(e) {
 
       if (!name && !country && !category) continue;
 
-      if (country) countryTargets[country] = (countryTargets[country] || 0) + 1;
-      if (agenda)  agendaTargets[agenda]   = (agendaTargets[agenda]  || 0) + 1;
+      if (country && name) {
+        var ck = country + "|" + name.toLowerCase();
+        if (!seenCountryName[ck]) {
+          seenCountryName[ck] = true;
+          countryTargets[country] = (countryTargets[country] || 0) + 1;
+        }
+      }
+      if (agenda) agendaTargets[agenda] = (agendaTargets[agenda] || 0) + 1;
 
       var dateOnly = "";
       if (checkinRaw !== "") {
@@ -101,11 +109,17 @@ function doGet(e) {
       });
     }
 
+    var seenNames = {};
+    for (var j = 0; j < participants.length; j++) {
+      if (participants[j].name) seenNames[participants[j].name.toLowerCase()] = true;
+    }
+
     return _json({
-      cutoff:         _cutoff(),
-      countryTargets: countryTargets,
-      agendaTargets:  agendaTargets,
-      participants:   participants
+      cutoff:             _cutoff(),
+      uniqueParticipants: Object.keys(seenNames).length,
+      countryTargets:     countryTargets,
+      agendaTargets:      agendaTargets,
+      participants:       participants
     });
 
   } catch (err) {
