@@ -10,7 +10,7 @@
  *   M  (13) = TEMPAT CHECK IN
  *
  * Fungsi _classifyTempat dan _classifyAgenda dipakai bersama
- * oleh el1_processor.gs (shared namespace Apps Script).
+ * oleh el1_processor.gs / HP & SCANNER processor (shared namespace Apps Script).
  * ============================================================
  */
 
@@ -393,12 +393,14 @@ function onOpen() {
   SpreadsheetApp.getUi()
     .createMenu("Otomasi Absensi")
     .addItem("Proses M.LOOKER (Batch)", "klasifikasiTempatCheckIn")
-    .addItem("Proses EL1 (Batch)", "processEL1")
-    .addItem("Sync EL1 → M.LOOKER", "syncEL1ToMLooker")
-    .addItem("Proses + Sync EL1", "processAndSync")
+    .addItem("Proses HP (Batch)", "processHP")
+    .addItem("Proses SCANNER (Batch)", "processScanner")
+    .addItem("Proses HP + SCANNER (Batch)", "processAll")
+    .addItem("Sync HP + SCANNER → M.LOOKER", "syncToMLooker")
+    .addItem("Proses + Sync Semua", "processAndSync")
     .addSeparator()
     .addItem("Pasang Trigger M.LOOKER", "pasangTrigger")
-    .addItem("Pasang Trigger EL1", "pasangTriggerEL1")
+    .addItem("Pasang Trigger HP & SCANNER", "pasangTriggerSources")
     .addItem("Hapus Semua Trigger", "hapusTrigger")
     .addSeparator()
     .addItem("Tes Klasifikasi", "testKlasifikasi")
