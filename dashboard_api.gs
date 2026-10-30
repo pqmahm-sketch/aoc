@@ -8,6 +8,7 @@
  *
  * MODE:
  *   ?mode=dashboard  → tampilkan dashboard HTML (versi online)
+ *   ?mode=scan&scanned=VALUE → terima data scanner, tulis ke SCANNER sheet
  *   (default)        → return JSON API
  *
  * CARA DEPLOY / UPDATE:
@@ -42,6 +43,17 @@ function doGet(e) {
     return HtmlService.createHtmlOutputFromFile('dashboard_hosted')
       .setTitle('AOC 2026 Attendance Tracker')
       .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+  }
+
+  if (mode === 'scan') {
+    try {
+      var scanned = (e.parameter.scanned || "").trim();
+      if (!scanned) return _json({ error: "Parameter 'scanned' kosong" });
+      var result = appendScannerData(scanned);
+      return _json(result);
+    } catch (err) {
+      return _json({ error: err.message });
+    }
   }
 
   try {
@@ -146,6 +158,60 @@ function getDashboardData() {
 
 function _cutoff() {
   return Utilities.formatDate(new Date(), "Asia/Jakarta", "dd MMM yyyy · HH:mm") + " WIB";
+}
+
+function appendScannerData(scannedValue) {
+  var ss = SpreadsheetApp.openById("1S3nAnX5ije6prGTwnJ7sZsdYmQtu7q8g");
+
+  var scannerSheet = ss.getSheetByName("SCANNER");
+  if (!scannerSheet) throw new Error("Sheet SCANNER tidak ditemukan");
+
+  var now = new Date();
+  var day   = now.getDate();
+  var month = now.getMonth() + 1;
+  var year  = now.getFullYear();
+  var hrs   = now.getHours();
+  var mins  = now.getMinutes();
+  var tMin  = hrs * 60 + mins;
+
+  var timestamp = Utilities.formatDate(now, "Asia/Jakarta", "dd/MM/yyyy HH:mm:ss");
+  var dateStr   = _pad(day) + "/" + _pad(month) + "/" + year;
+  var timeStr   = _pad(hrs) + "." + _pad(mins);
+  var agenda    = _classifyAgenda(day, month, year);
+  var tempat    = _classifyTempat(day, month, year, tMin);
+
+  scannerSheet.appendRow([timestamp, dateStr, timeStr, scannedValue, agenda, tempat]);
+
+  var ml = ss.getSheetByName("M.LOOKER");
+  if (!ml) throw new Error("Sheet M.LOOKER tidak ditemukan");
+
+  var participantName = "";
+  var mlLast = ml.getLastRow();
+  if (mlLast > 1) {
+    var mlRows  = mlLast - 1;
+    var mlCodes = ml.getRange(2, 4, mlRows, 1).getDisplayValues();
+    var mlNames = ml.getRange(2, 5, mlRows, 1).getDisplayValues();
+    var key     = scannedValue.toLowerCase();
+
+    for (var i = 0; i < mlCodes.length; i++) {
+      var code = (mlCodes[i][0] || "").trim().toLowerCase();
+      if (code === key) {
+        ml.getRange(i + 2, 11).setValue("HADIR");
+        ml.getRange(i + 2, 12).setValue(timestamp);
+        ml.getRange(i + 2, 13).setValue(tempat);
+        participantName = (mlNames[i][0] || "").trim();
+        break;
+      }
+    }
+  }
+
+  return {
+    success: true,
+    scanned: scannedValue,
+    timestamp: timestamp,
+    name: participantName || null,
+    tempat: tempat
+  };
 }
 
 function _json(obj) {

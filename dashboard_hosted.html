@@ -197,6 +197,22 @@ h1,h2,h3,h4,p{margin:0}
 @media (min-width:641px){
   .mobile-list,.m-bars,.see-all{display:none !important}
 }
+
+/* scanner bar */
+.scanner-bar{display:flex;align-items:center;gap:10px;padding:12px 16px;background:#fff;border:2px solid #7a2020;border-radius:12px;margin-bottom:18px;position:relative}
+.scanner-bar .scan-ico{width:36px;height:36px;border-radius:8px;background:#7a2020;display:grid;place-items:center;color:#fff;flex:none}
+.scanner-bar input{flex:1;border:none;outline:none;font:600 14px 'Inter',sans-serif;color:#1a1a1a;background:transparent;padding:4px 0}
+.scanner-bar input::placeholder{color:#b0b0b0;font-weight:400}
+.scanner-bar .scan-status{font-size:11px;color:#8a8a8a;white-space:nowrap}
+.scan-toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);padding:12px 24px;border-radius:10px;font:600 13px 'Inter',sans-serif;color:#fff;z-index:1000;opacity:0;transition:opacity .3s;pointer-events:none;max-width:90vw;text-align:center}
+.scan-toast.success{background:#1e7a3a}
+.scan-toast.error{background:#b42318}
+.scan-toast.show{opacity:1}
+@media (max-width:640px){
+  .scanner-bar{padding:10px 12px;gap:8px;margin-bottom:12px}
+  .scanner-bar .scan-ico{width:30px;height:30px}
+  .scanner-bar input{font-size:13px}
+}
 </style>
 </head>
 <body>
@@ -226,6 +242,14 @@ h1,h2,h3,h4,p{margin:0}
     <span>⚠</span>
     <span id="error-msg">Gagal memuat data.</span>
   </div>
+
+  <!-- SCANNER INPUT -->
+  <div class="scanner-bar">
+    <div class="scan-ico"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><line x1="7" y1="12" x2="17" y2="12"/></svg></div>
+    <input type="text" id="scanner-input" placeholder="Scan barcode di sini..." inputmode="none" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+    <div class="scan-status" id="scan-status">Siap scan</div>
+  </div>
+  <div class="scan-toast" id="scan-toast"></div>
 
   <!-- FILTERS -->
   <div class="filters">
@@ -548,6 +572,62 @@ document.getElementById('see-all-btn').addEventListener('click', function() {
   w.classList.toggle('collapsed', !expanded);
   document.getElementById('see-all-btn').textContent = expanded ? "Show less ▴" : "See all ▾";
 });
+
+// ============ SCANNER ============
+(function() {
+  var scanInput = document.getElementById('scanner-input');
+  var scanStatus = document.getElementById('scan-status');
+  var scanToast = document.getElementById('scan-toast');
+  var toastTimer = null;
+
+  function showToast(msg, type) {
+    scanToast.textContent = msg;
+    scanToast.className = 'scan-toast ' + type + ' show';
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function() { scanToast.classList.remove('show'); }, 3000);
+  }
+
+  function submitScan(value) {
+    if (!value) return;
+    scanStatus.textContent = 'Mengirim...';
+    scanInput.disabled = true;
+
+    google.script.run
+      .withSuccessHandler(function(result) {
+        scanInput.disabled = false;
+        scanInput.value = '';
+        scanInput.focus();
+        if (result.success) {
+          var msg = result.name
+            ? 'CHECK IN: ' + result.name + ' (' + result.scanned + ')'
+            : 'Tersimpan: ' + result.scanned + ' (tidak ditemukan di M.LOOKER)';
+          showToast(msg, result.name ? 'success' : 'error');
+          scanStatus.textContent = result.name ? 'Terakhir: ' + result.name : 'Siap scan';
+          loadData(false);
+        } else {
+          showToast('Error: ' + (result.error || 'unknown'), 'error');
+          scanStatus.textContent = 'Siap scan';
+        }
+      })
+      .withFailureHandler(function(err) {
+        scanInput.disabled = false;
+        scanInput.value = '';
+        scanInput.focus();
+        showToast('Gagal: ' + (err.message || String(err)), 'error');
+        scanStatus.textContent = 'Siap scan';
+      })
+      .appendScannerData(value);
+  }
+
+  scanInput.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      submitScan(scanInput.value.trim());
+    }
+  });
+
+  setTimeout(function() { scanInput.focus(); }, 500);
+})();
 
 function fetchData() {
   return new Promise(function(resolve, reject) {
