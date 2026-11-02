@@ -602,12 +602,15 @@ document.getElementById('see-all-btn').addEventListener('click', function() {
   document.getElementById('see-all-btn').textContent = expanded ? "Show less ▴" : "See all ▾";
 });
 
-// ============ SCANNER ============
+// ============ SCANNER (global keyboard capture) ============
 (function() {
   var scanInput = document.getElementById('scanner-input');
   var scanStatus = document.getElementById('scan-status');
   var scanToast = document.getElementById('scan-toast');
   var toastTimer = null;
+  var scanBuffer = '';
+  var bufferTimer = null;
+  var sending = false;
 
   function showToast(msg, type) {
     scanToast.textContent = msg;
@@ -616,17 +619,22 @@ document.getElementById('see-all-btn').addEventListener('click', function() {
     toastTimer = setTimeout(function() { scanToast.classList.remove('show'); }, 3000);
   }
 
+  function resetBuffer() {
+    scanBuffer = '';
+    scanInput.value = '';
+  }
+
   async function submitScan(value) {
-    if (!value) return;
+    if (!value || sending) return;
+    sending = true;
     scanStatus.textContent = 'Mengirim...';
-    scanInput.disabled = true;
+    scanInput.value = value;
     try {
       var url = API_URL + '?mode=scan&scanned=' + encodeURIComponent(value);
       var resp = await fetch(url);
       var result = await resp.json();
-      scanInput.disabled = false;
-      scanInput.value = '';
-      scanInput.focus();
+      sending = false;
+      resetBuffer();
       if (result.success) {
         var msg = result.name
           ? 'CHECK IN: ' + result.name + ' (' + result.scanned + ')'
@@ -639,22 +647,37 @@ document.getElementById('see-all-btn').addEventListener('click', function() {
         scanStatus.textContent = 'Siap scan';
       }
     } catch (err) {
-      scanInput.disabled = false;
-      scanInput.value = '';
-      scanInput.focus();
+      sending = false;
+      resetBuffer();
       showToast('Gagal: ' + err.message, 'error');
       scanStatus.textContent = 'Siap scan';
     }
   }
 
-  scanInput.addEventListener('keydown', function(e) {
+  document.addEventListener('keydown', function(e) {
+    var tag = (e.target.tagName || '').toLowerCase();
+    if (tag === 'select') return;
+
     if (e.key === 'Enter') {
       e.preventDefault();
-      submitScan(scanInput.value.trim());
+      clearTimeout(bufferTimer);
+      var val = scanBuffer.trim();
+      if (val) submitScan(val);
+      return;
+    }
+
+    if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
+      e.preventDefault();
+      scanBuffer += e.key;
+      scanInput.value = scanBuffer;
+      clearTimeout(bufferTimer);
+      bufferTimer = setTimeout(function() { resetBuffer(); }, 5000);
     }
   });
 
-  setTimeout(function() { scanInput.focus(); }, 500);
+  scanInput.addEventListener('focus', function() {
+    scanInput.blur();
+  });
 })();
 
 // Fetch data from Apps Script web app

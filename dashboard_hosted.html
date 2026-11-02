@@ -573,12 +573,15 @@ document.getElementById('see-all-btn').addEventListener('click', function() {
   document.getElementById('see-all-btn').textContent = expanded ? "Show less ▴" : "See all ▾";
 });
 
-// ============ SCANNER ============
+// ============ SCANNER (global keyboard capture) ============
 (function() {
   var scanInput = document.getElementById('scanner-input');
   var scanStatus = document.getElementById('scan-status');
   var scanToast = document.getElementById('scan-toast');
   var toastTimer = null;
+  var scanBuffer = '';
+  var bufferTimer = null;
+  var sending = false;
 
   function showToast(msg, type) {
     scanToast.textContent = msg;
@@ -587,16 +590,21 @@ document.getElementById('see-all-btn').addEventListener('click', function() {
     toastTimer = setTimeout(function() { scanToast.classList.remove('show'); }, 3000);
   }
 
+  function resetBuffer() {
+    scanBuffer = '';
+    scanInput.value = '';
+  }
+
   function submitScan(value) {
-    if (!value) return;
+    if (!value || sending) return;
+    sending = true;
     scanStatus.textContent = 'Mengirim...';
-    scanInput.disabled = true;
+    scanInput.value = value;
 
     google.script.run
       .withSuccessHandler(function(result) {
-        scanInput.disabled = false;
-        scanInput.value = '';
-        scanInput.focus();
+        sending = false;
+        resetBuffer();
         if (result.success) {
           var msg = result.name
             ? 'CHECK IN: ' + result.name + ' (' + result.scanned + ')'
@@ -610,23 +618,38 @@ document.getElementById('see-all-btn').addEventListener('click', function() {
         }
       })
       .withFailureHandler(function(err) {
-        scanInput.disabled = false;
-        scanInput.value = '';
-        scanInput.focus();
+        sending = false;
+        resetBuffer();
         showToast('Gagal: ' + (err.message || String(err)), 'error');
         scanStatus.textContent = 'Siap scan';
       })
       .appendScannerData(value);
   }
 
-  scanInput.addEventListener('keydown', function(e) {
+  document.addEventListener('keydown', function(e) {
+    var tag = (e.target.tagName || '').toLowerCase();
+    if (tag === 'select') return;
+
     if (e.key === 'Enter') {
       e.preventDefault();
-      submitScan(scanInput.value.trim());
+      clearTimeout(bufferTimer);
+      var val = scanBuffer.trim();
+      if (val) submitScan(val);
+      return;
+    }
+
+    if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
+      e.preventDefault();
+      scanBuffer += e.key;
+      scanInput.value = scanBuffer;
+      clearTimeout(bufferTimer);
+      bufferTimer = setTimeout(function() { resetBuffer(); }, 5000);
     }
   });
 
-  setTimeout(function() { scanInput.focus(); }, 500);
+  scanInput.addEventListener('focus', function() {
+    scanInput.blur();
+  });
 })();
 
 function fetchData() {
