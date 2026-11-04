@@ -180,7 +180,8 @@ function appendScannerData(scannedValue) {
   var agenda    = _classifyAgenda(day, month, year);
   var tempat    = _classifyTempat(day, month, year, tMin);
 
-  scannerSheet.appendRow([timestamp, dateStr, timeStr, scannedValue, agenda, tempat]);
+  var nextRow = _getNextEmptyRow(scannerSheet);
+  scannerSheet.getRange(nextRow, 1, 1, 6).setValues([[timestamp, dateStr, timeStr, scannedValue, agenda, tempat]]);
 
   syncToMLooker();
 
@@ -207,6 +208,14 @@ function appendScannerData(scannedValue) {
     name: participantName || null,
     tempat: tempat
   };
+}
+
+function _getNextEmptyRow(sheet) {
+  var colA = sheet.getRange("A:A").getValues();
+  for (var i = 1; i < colA.length; i++) {
+    if (!colA[i][0] || String(colA[i][0]).trim() === "") return i + 1;
+  }
+  return colA.length + 1;
 }
 
 function _json(obj) {
