@@ -166,6 +166,9 @@ function appendScannerData(scannedValue) {
   var scannerSheet = ss.getSheetByName("SCANNER");
   if (!scannerSheet) throw new Error("Sheet SCANNER tidak ditemukan");
 
+  var ml = ss.getSheetByName("M.LOOKER");
+  if (!ml) throw new Error("Sheet M.LOOKER tidak ditemukan");
+
   var now = new Date();
   var day   = now.getDate();
   var month = now.getMonth() + 1;
@@ -182,24 +185,18 @@ function appendScannerData(scannedValue) {
 
   scannerSheet.appendRow([timestamp, dateStr, timeStr, scannedValue, agenda, tempat]);
 
-  var ml = ss.getSheetByName("M.LOOKER");
-  if (!ml) throw new Error("Sheet M.LOOKER tidak ditemukan");
-
   var participantName = "";
   var mlLast = ml.getLastRow();
   if (mlLast > 1) {
-    var mlRows  = mlLast - 1;
-    var mlCodes = ml.getRange(2, 4, mlRows, 1).getDisplayValues();
-    var mlNames = ml.getRange(2, 5, mlRows, 1).getDisplayValues();
-    var key     = scannedValue.toLowerCase();
+    var mlRows = mlLast - 1;
+    var mlData = ml.getRange(2, 4, mlRows, 2).getDisplayValues();
+    var key = scannedValue.toLowerCase();
 
-    for (var i = 0; i < mlCodes.length; i++) {
-      var code = (mlCodes[i][0] || "").trim().toLowerCase();
+    for (var i = 0; i < mlData.length; i++) {
+      var code = (mlData[i][0] || "").trim().toLowerCase();
       if (code === key) {
-        ml.getRange(i + 2, 11).setValue("HADIR");
-        ml.getRange(i + 2, 12).setValue(timestamp);
-        ml.getRange(i + 2, 13).setValue(tempat);
-        participantName = (mlNames[i][0] || "").trim();
+        ml.getRange(i + 2, 11, 1, 3).setValues([["HADIR", timestamp, tempat]]);
+        participantName = (mlData[i][1] || "").trim();
         break;
       }
     }

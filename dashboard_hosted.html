@@ -611,7 +611,6 @@ document.getElementById('see-all-btn').addEventListener('click', function() {
             : 'Tersimpan: ' + result.scanned + ' (tidak ditemukan di M.LOOKER)';
           showToast(msg, result.name ? 'success' : 'error');
           scanStatus.textContent = result.name ? 'Terakhir: ' + result.name : 'Siap scan';
-          loadData(false);
         } else {
           showToast('Error: ' + (result.error || 'unknown'), 'error');
           scanStatus.textContent = 'Siap scan';
