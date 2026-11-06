@@ -1,4 +1,4 @@
-import html
+import html, sys
 
 lo_map = {
     ("Maldives", "Sheesha Pvt Ltd"): "Boyke",
@@ -113,9 +113,13 @@ import os, base64
 
 PHOTO_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "photos_compressed")
 
+USE_GDRIVE_URLS = "--gdrive" in sys.argv
+
 def get_photo_url(name):
     fid = photo_map.get(name)
     if fid:
+        if USE_GDRIVE_URLS:
+            return f"https://drive.google.com/uc?export=view&id={fid}"
         local_path = os.path.join(PHOTO_DIR, f"{fid}.jpg")
         if os.path.exists(local_path):
             return f"file://{local_path}"
@@ -215,6 +219,100 @@ participants = [
     {"no": 91, "country": "Vietnam", "company": "HVN", "role": "Dealer", "contest": "COM2", "title": "Ms.", "name": "LE THUY TRAM", "email": "thanhnh@tienthu.vn", "phone": "84964801234", "position": "Director", "language": "Vietnamese", "food": "No restriction", "transfer_arr": "Yes", "transfer_dep": "Yes", "vehicle": "Hiace (3 unit)"},
 ]
 
+nickname_map = {
+    "CHANDANA DINIDU KUMARA HETTI ARACHCHIGE": "Chandana",
+    "AMINATH MAIHA AHMED": "Maiha",
+    "THAIMOOR ADAM MOOSA": "Thaimoor",
+    "MOHAMED ISHAM": "Isham",
+    "RY CHETRA": "Chetra",
+    "SAN SOKON": "Sokon",
+    "TUON NAKHA": "Nakha",
+    "TENG DARA": "Dara",
+    "VORN MAKARA": "Makara",
+    "SENG RITHY": "Rithy",
+    "CHHAY RATTANA": "Rattana",
+    "THAIKING SITTICHAI": "Sittichai",
+    "JERALD CHRISTOPHER M. MINIANO": "Jerald",
+    "AARON GLENN P. AGUILAR": "Aaron",
+    "JAY M. BERNABE": "Jay",
+    "ALBERTO M. ALABAR": "Alberto",
+    "JUSTINE B. SUYOM": "Justine",
+    "MARK JOHN V. BLAS": "Mark",
+    "PETER JHON M. BARENG": "Peter",
+    "CYRUS L. PAGARAN": "Cy",
+    "LIN HAO PANG": "Hao-Pang",
+    "HUANG KAI LUN": "Kai-Lun",
+    "CHEN CHIEH NING": "Ning-Ning",
+    "CHEN SHU YUAN": "Yuan-Yuan",
+    "TAWATCHAI PRAHA": "Pae",
+    "DUSIT NAMSUE": "Laa",
+    "CHAWADOL REUNTHANAKUL": "Mai",
+    "TANASATE TANAPORNCHOCKANUN": "Tee",
+    "NOPPHARAT DIMUN": "Lek",
+    "TAWEE BUNRAT": "Ning",
+    "WANCHAI SRINOTHAI": "Chai",
+    "SITTICHOK REANSRITONGKAM": "Boy",
+    "THAWIN JIENGRAM": "Win",
+    "NATHAWUT LOISAIOO": "M",
+    "PRAMOTE INTHISANG": "Mote",
+    "MUHAMMAD AL AMIN BIN YUSRI": "Amin",
+    "KWANG TECK HING": "Hing",
+    "AIDIL ADHA BIN SAMSUMAR": "Adek",
+    "MUHAMMAD FAIZAL BIN MD FIKRI": "Jai",
+    "HAFIZUL AFIFI BIN RUSMANI": "Zul",
+    "MOHD NAZRI BIN MD YUSOFF": "Dekngah",
+    "NICHOLAS GERARD GOMEZ": "Nick",
+    "MUHAMMAD SYAWAL BIN ABDUL RAZAK": "Syawal",
+    "AMIT MAHATA": "Amit",
+    "MANOJ KUMAR": "Manoj Kr",
+    "AROMAL P. ROBSON": "Aromal P.R",
+    "ABDULRAZAK MAQBOOL KHAN": "Maqbool",
+    "GURURAJ VASANTRAO JOSHI": "G V Joshi",
+    "AJAY DAHIYA": "Ajay",
+    "VIVEK SAXENA": "Vivek",
+    "SAGAR NARAYAN BHALERAO": "Sagar",
+    "HOANG VAN TUAN SONG": "Song",
+    "LE XUAN THANG": "Thang",
+    "NGUYEN VAN LINH": "Linh",
+    "TRAN VAN PHU": "Phu",
+    "LE THANH TUAN": "Tuan",
+    "MAC QUOC LONG": "Long",
+    "LE VAN TIENG": "Tieng",
+    "TRAN BAO KHA": "Kha",
+    "BUI CONG THANH": "Cong Thanh",
+    "NGUYEN HONG QUANG": "Quang",
+    "NGUYEN HONG THANH": "Hong Thanh",
+    "VU DUY LAM": "Lam",
+    "DAU QUANG HIEU": "Hieu",
+    "NGUYEN VAN CHUYEN": "Chuyen",
+    "PHUNG XUAN BIEN": "Bien",
+    "LE THI THUY TRANG": "Trang",
+    "LE THUY TRAM": "Tram",
+    "KEIZO OTA": "Ota",
+    "PRASERT VICHITKULSAWAT": "Ood",
+    "PAKORN BOONPIAMSAK": "Korn",
+    "KANCHANA PARINYAPORNKUN": "Peung",
+    "HIROSHI ISHIDA": "Ishi",
+    "TOSHIYA TAKENAGA": "Take",
+    "WISIT SOMWANGSIRI": "Mai",
+    "KANLAYAPHAS BOONYATEERAPAT": "Kate",
+    "SUKRIS KONGPONG": "Siwa",
+    "NUTCHAREE SUKHO": "Joy",
+    "MANIDA KAEWPHETSUWAN": "Pui",
+    "WARAH LUANGUDOMCHAI": "Leang",
+    "PHORNTHIP SUNTISUKKASEM": "Thip",
+    "TEERAPONG PROMDEE": "Film",
+    "CHOMPOONUCH ASAWACHAISUWIKROM": "Queen",
+    "ATIMA WATCHARINTADA": "Sky",
+    "POOHRIN WUTTHIKAIUDOMDAJ": "Pooh",
+    "CHANATHIP SARTTAYARAT": "Sun",
+    "NAPHATSORN SILWATTA": "Cin",
+    "WIMONRAT HIRANWONG": "Wawi",
+    "PONGSATORN PROMWANG": "Petch",
+    "PICHAYAPORN CHAIYARUNGROJ": "Stamp",
+    "SARISA INGKANANTAWAREE": "Jennie",
+}
+
 company_full = {
     "Sheesha Pvt Ltd": "Sheesha Pvt Ltd",
     "NCX-C": "N.C.X. Co., Ltd.",
@@ -302,7 +400,7 @@ for lo in lo_order:
         lines.append(f'<p class="pax-count">Total: {len(ps)} participant(s)</p>')
 
         lines.append('<table>')
-        lines.append('<tr><th style="width:80px">Photo</th><th style="width:3%">No</th><th>Nama</th><th>Role</th><th>Contest</th><th>Email / Telp</th><th>Position</th><th>Language</th><th>Food</th><th>Airport Transfer</th></tr>')
+        lines.append('<tr><th style="width:80px">Photo</th><th style="width:3%">No</th><th>Nama</th><th>Nickname</th><th>Role</th><th>Contest</th><th>Email / Telp</th><th>Position</th><th>Language</th><th>Food</th><th>Airport Transfer</th></tr>')
 
         for i, p in enumerate(ps, 1):
             contest_display = p["contest"] if p["contest"] != "-" else "-"
@@ -322,10 +420,12 @@ for lo in lo_order:
             else:
                 transfer = "No"
 
+            nickname = nickname_map.get(p["name"], "-")
             lines.append(f'<tr>'
                 f'{photo_cell(p["name"])}'
                 f'<td>{i}</td>'
                 f'<td><b>{esc(p["title"])} {esc(p["name"])}</b></td>'
+                f'<td style="font-weight:bold; color:#0066CC;">{esc(nickname)}</td>'
                 f'<td>{esc(p["role"])}</td>'
                 f'<td>{esc(contest_display)}</td>'
                 f'<td style="font-size:8pt;">{esc(p["email"])}<br>{esc(p["phone"])}</td>'
