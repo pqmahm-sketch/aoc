@@ -4,8 +4,8 @@
  * ============================================================
  * Sheet HP & SCANNER — kolom (sama):
  *   A (1) = TIMESTAMP       ← input dari scanner / form
- *   B (2) = DATE            ← auto-fill (dd/mm/yyyy)
- *   C (3) = TIME            ← auto-fill (HH.mm)
+ *   B (2) = DATE            ← auto-fill (dd-mm-yyyy)
+ *   C (3) = TIME            ← auto-fill (HH:mm)
  *   D (4) = SCANNED DETAILS ← identifier peserta
  *
  * Sync ke M.LOOKER:
