@@ -33,6 +33,7 @@ var SRC_SCANNED   = 4;  // D
 
 // M.LOOKER column indices (1-based)
 var ML_UNIQUE_CODE = 4;   // D — lookup key
+var ML_AGENDA      = 12;  // L
 var ML_STATUS      = 13;  // M
 var ML_CHECKIN     = 14;  // N
 var ML_TEMPAT      = 15;  // O
@@ -143,6 +144,7 @@ function syncToMLooker() {
 
   var mlRows  = mlLast - 1;
   var mlCodes = ml.getRange(2, ML_UNIQUE_CODE, mlRows, 1).getDisplayValues();
+  var mlAG    = ml.getRange(2, ML_AGENDA, mlRows, 1).getDisplayValues();
   var mlTP    = ml.getRange(2, ML_TEMPAT, mlRows, 1).getDisplayValues();
 
   var newCI  = [];
@@ -153,13 +155,16 @@ function syncToMLooker() {
     var code = (mlCodes[i][0] || "").trim();
     var key  = code.toLowerCase();
     var prefilledTempat = (mlTP[i][0] || "").trim();
+    var prefilledAgenda = (mlAG[i][0] || "").trim();
     var matchedTS = "";
 
     if (lookup[key] && prefilledTempat) {
       var timestamps = lookup[key];
       for (var j = 0; j < timestamps.length; j++) {
-        var classified = getTempatCheckIn(timestamps[j]);
-        if (classified === prefilledTempat) {
+        var classifiedTempat = getTempatCheckIn(timestamps[j]);
+        var classifiedAgenda = getAgendaFromCheckIn(timestamps[j]);
+        if (classifiedTempat === prefilledTempat &&
+            prefilledAgenda.indexOf(classifiedAgenda) === 0) {
           matchedTS = timestamps[j];
           break;
         }
