@@ -120,7 +120,7 @@ function getDashboardData() {
     if (agenda) agendaTargets[agenda] = (agendaTargets[agenda] || 0) + 1;
 
     if (!status) {
-      status = (checkinRaw !== "" && location !== "") ? "HADIR" : "BELUM HADIR";
+      status = checkinRaw !== "" ? "HADIR" : "BELUM HADIR";
     }
 
     participants.push({
@@ -168,16 +168,13 @@ function appendScannerData(scannedValue) {
   var year  = now.getFullYear();
   var hrs   = now.getHours();
   var mins  = now.getMinutes();
-  var tMin  = hrs * 60 + mins;
 
   var timestamp = Utilities.formatDate(now, "Asia/Jakarta", "dd/MM/yyyy HH:mm:ss");
   var dateStr   = _pad(day) + "/" + _pad(month) + "/" + year;
   var timeStr   = _pad(hrs) + "." + _pad(mins);
-  var agenda    = _classifyAgenda(day, month, year);
-  var tempat    = _classifyTempat(day, month, year, tMin);
 
   var nextRow = _getNextEmptyRow(scannerSheet);
-  scannerSheet.getRange(nextRow, 1, 1, 6).setValues([[timestamp, dateStr, timeStr, scannedValue, agenda, tempat]]);
+  scannerSheet.getRange(nextRow, 1, 1, 4).setValues([[timestamp, dateStr, timeStr, scannedValue]]);
 
   syncToMLooker();
 
@@ -201,8 +198,7 @@ function appendScannerData(scannedValue) {
     success: true,
     scanned: scannedValue,
     timestamp: timestamp,
-    name: participantName || null,
-    tempat: tempat
+    name: participantName || null
   };
 }
 

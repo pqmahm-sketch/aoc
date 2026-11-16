@@ -7,15 +7,14 @@
  *   B (2) = DATE            ← auto-fill (dd/mm/yyyy)
  *   C (3) = TIME            ← auto-fill (HH.mm)
  *   D (4) = SCANNED DETAILS ← identifier peserta
- *   E (5) = AGENDA          ← auto-fill dari DATE
- *   F (6) = TEMPAT CHECKIN  ← auto-fill dari DATE + TIME
  *
  * Sync ke M.LOOKER:
  *   HP.D / SCANNER.D (SCANNED DETAILS) di-match dengan
  *   M.LOOKER.D (UNIQUE CODE)
- *   → M.LOOKER.N (14) = TIMESTAMP
- *   → M.LOOKER.O (15) = TEMPAT CHECKIN / LOCATION
- *   → M.LOOKER.M (13) = HADIR / BELUM HADIR
+ *   Timestamp di-classify → tempat, lalu dicocokkan dengan
+ *   M.LOOKER.O (pre-filled TEMPAT CHECK IN)
+ *   → M.LOOKER.N (14) = TIMESTAMP (jika tempat cocok)
+ *   → M.LOOKER.M (13) = HADIR jika N terisi, BELUM HADIR jika kosong
  *
  * Fungsi _classifyTempat, _classifyAgenda, _pad, parseDateString,
  * dan getSpreadsheet didefinisikan di tempat_checkin.gs
@@ -31,8 +30,6 @@ var SRC_TIMESTAMP = 1;  // A
 var SRC_DATE      = 2;  // B
 var SRC_TIME      = 3;  // C
 var SRC_SCANNED   = 4;  // D
-var SRC_AGENDA    = 5;  // E
-var SRC_TEMPAT    = 6;  // F
 
 // M.LOOKER column indices (1-based)
 var ML_UNIQUE_CODE = 4;   // D — lookup key
@@ -41,7 +38,7 @@ var ML_CHECKIN     = 14;  // N
 var ML_TEMPAT      = 15;  // O
 
 // ============================================================
-// Generic: auto-fill kolom B, C, E, F dari TIMESTAMP (A)
+// Generic: auto-fill kolom B (DATE), C (TIME) dari TIMESTAMP (A)
 // ============================================================
 function _processSheet(sheetName) {
   var ss    = getSpreadsheet();
@@ -55,10 +52,8 @@ function _processSheet(sheetName) {
   var rawVals  = sheet.getRange(2, SRC_TIMESTAMP, dataRows, 1).getValues();
   var dispVals = sheet.getRange(2, SRC_TIMESTAMP, dataRows, 1).getDisplayValues();
 
-  var dates   = [];
-  var times   = [];
-  var agendas = [];
-  var tempats = [];
+  var dates = [];
+  var times = [];
 
   for (var i = 0; i < rawVals.length; i++) {
     var raw  = rawVals[i][0];
@@ -72,27 +67,22 @@ function _processSheet(sheetName) {
     }
 
     if (!date || isNaN(date.getTime())) {
-      dates.push([""]); times.push([""]); agendas.push([""]); tempats.push([""]);
+      dates.push([""]); times.push([""]);
       continue;
     }
 
-    var day   = date.getDate();
+    var hrs  = date.getHours();
+    var mins = date.getMinutes();
+    var day  = date.getDate();
     var month = date.getMonth() + 1;
     var year  = date.getFullYear();
-    var hrs   = date.getHours();
-    var mins  = date.getMinutes();
-    var tMin  = hrs * 60 + mins;
 
     dates.push([_pad(day) + "/" + _pad(month) + "/" + year]);
     times.push([_pad(hrs) + "." + _pad(mins)]);
-    agendas.push([_classifyAgenda(day, month, year)]);
-    tempats.push([_classifyTempat(day, month, year, tMin)]);
   }
 
-  sheet.getRange(2, SRC_DATE,   dataRows, 1).setValues(dates);
-  sheet.getRange(2, SRC_TIME,   dataRows, 1).setValues(times);
-  sheet.getRange(2, SRC_AGENDA, dataRows, 1).setValues(agendas);
-  sheet.getRange(2, SRC_TEMPAT, dataRows, 1).setValues(tempats);
+  sheet.getRange(2, SRC_DATE, dataRows, 1).setValues(dates);
+  sheet.getRange(2, SRC_TIME, dataRows, 1).setValues(times);
 
   Logger.log(sheetName + " batch selesai: " + dataRows + " baris.");
 }
@@ -102,7 +92,8 @@ function processScanner() { _processSheet(SCANNER_SHEET_NAME); }
 function processAll()     { processHP(); processScanner(); }
 
 // ============================================================
-// Generic: baca lookup dari satu sheet sumber
+// Generic: baca lookup dari satu sheet sumber (kolom A & D)
+// Mengembalikan { code: [timestamp1, timestamp2, ...] }
 // ============================================================
 function _buildLookup(ss, sheetName) {
   var sheet = ss.getSheetByName(sheetName);
@@ -112,18 +103,18 @@ function _buildLookup(ss, sheetName) {
   if (lastRow <= 1) { Logger.log(sheetName + " kosong."); return {}; }
 
   var rows = lastRow - 1;
-  var data = sheet.getRange(2, 1, rows, 6).getDisplayValues();
+  var data = sheet.getRange(2, 1, rows, 4).getDisplayValues();
 
   var lookup = {};
   for (var i = 0; i < data.length; i++) {
     var timestamp = (data[i][0] || "").trim();   // A
     var scanned   = (data[i][3] || "").trim();   // D
-    var tempat    = (data[i][5] || "").trim();   // F
 
     if (!scanned || !timestamp) continue;
 
     var key = scanned.toLowerCase();
-    lookup[key] = { timestamp: timestamp, tempat: tempat };
+    if (!lookup[key]) lookup[key] = [];
+    lookup[key].push(timestamp);
   }
 
   Logger.log(sheetName + ": " + Object.keys(lookup).length + " entries.");
@@ -131,59 +122,63 @@ function _buildLookup(ss, sheetName) {
 }
 
 // ============================================================
-// Sync: HP + SCANNER → M.LOOKER  (L, M, K)
+// Sync: HP + SCANNER → M.LOOKER  (M, N)
+// Kolom O (TEMPAT) sudah pre-filled di M.LOOKER — tidak ditimpa.
+// Timestamp di-classify → tempat, dicocokkan dengan kolom O.
 // ============================================================
 function syncToMLooker() {
   var ss = getSpreadsheet();
-  var ml = ss.getSheetByName(SHEET_NAME); // "M.LOOKER" dari tempat_checkin.gs
+  var ml = ss.getSheetByName(SHEET_NAME);
 
   if (!ml) { Logger.log("Sheet M.LOOKER tidak ditemukan."); return; }
 
-  // Build combined lookup dari kedua sheet
   var lookupHP      = _buildLookup(ss, HP_SHEET_NAME);
   var lookupScanner = _buildLookup(ss, SCANNER_SHEET_NAME);
 
-  // Gabung: SCANNER menimpa HP jika key sama (baris terakhir menang)
   var lookup = {};
   var k;
-  for (k in lookupHP)      { lookup[k] = lookupHP[k]; }
-  for (k in lookupScanner) { lookup[k] = lookupScanner[k]; }
+  for (k in lookupHP) {
+    lookup[k] = (lookup[k] || []).concat(lookupHP[k]);
+  }
+  for (k in lookupScanner) {
+    lookup[k] = (lookup[k] || []).concat(lookupScanner[k]);
+  }
 
-  // --- Baca M.LOOKER kolom D (UNIQUE CODE) ---
   var mlLast = ml.getLastRow();
   if (mlLast <= 1) { Logger.log("M.LOOKER kosong."); return; }
 
-  var mlRows      = mlLast - 1;
-  var mlCodes     = ml.getRange(2, ML_UNIQUE_CODE, mlRows, 1).getDisplayValues();
-  var mlCI        = ml.getRange(2, ML_CHECKIN, mlRows, 1).getDisplayValues();
-  var mlTP        = ml.getRange(2, ML_TEMPAT, mlRows, 1).getDisplayValues();
+  var mlRows  = mlLast - 1;
+  var mlCodes = ml.getRange(2, ML_UNIQUE_CODE, mlRows, 1).getDisplayValues();
+  var mlTP    = ml.getRange(2, ML_TEMPAT, mlRows, 1).getDisplayValues();
 
   var newCI  = [];
-  var newTP  = [];
   var newST  = [];
   var synced = 0;
 
   for (var i = 0; i < mlCodes.length; i++) {
     var code = (mlCodes[i][0] || "").trim();
     var key  = code.toLowerCase();
+    var prefilledTempat = (mlTP[i][0] || "").trim();
+    var matchedTS = "";
 
-    var ci = (mlCI[i][0] || "").trim();
-    var tp = (mlTP[i][0] || "").trim();
-
-    if (lookup[key]) {
-      ci = lookup[key].timestamp;
-      tp = lookup[key].tempat;
-      synced++;
+    if (lookup[key] && prefilledTempat) {
+      var timestamps = lookup[key];
+      for (var j = 0; j < timestamps.length; j++) {
+        var classified = getTempatCheckIn(timestamps[j]);
+        if (classified === prefilledTempat) {
+          matchedTS = timestamps[j];
+          break;
+        }
+      }
     }
 
-    newCI.push([ci]);
-    newTP.push([tp]);
-    newST.push([(ci && tp) ? "HADIR" : "BELUM HADIR"]);
+    newCI.push([matchedTS]);
+    newST.push([matchedTS ? "HADIR" : "BELUM HADIR"]);
+    if (matchedTS) synced++;
   }
 
   ml.getRange(2, ML_STATUS,  mlRows, 1).setValues(newST);
   ml.getRange(2, ML_CHECKIN, mlRows, 1).setValues(newCI);
-  ml.getRange(2, ML_TEMPAT,  mlRows, 1).setValues(newTP);
 
   Logger.log("Sync selesai: " + synced + " match dari " + mlRows + " baris M.LOOKER.");
 }
@@ -222,17 +217,14 @@ function _onEditSource(e) {
 
       if (!date || isNaN(date.getTime())) continue;
 
+      var hrs   = date.getHours();
+      var mins  = date.getMinutes();
       var day   = date.getDate();
       var month = date.getMonth() + 1;
       var year  = date.getFullYear();
-      var hrs   = date.getHours();
-      var mins  = date.getMinutes();
-      var tMin  = hrs * 60 + mins;
 
       sheet.getRange(row, SRC_DATE).setValue(_pad(day) + "/" + _pad(month) + "/" + year);
       sheet.getRange(row, SRC_TIME).setValue(_pad(hrs) + "." + _pad(mins));
-      sheet.getRange(row, SRC_AGENDA).setValue(_classifyAgenda(day, month, year));
-      sheet.getRange(row, SRC_TEMPAT).setValue(_classifyTempat(day, month, year, tMin));
     }
   } catch (err) {
     Logger.log("onEditSource error (" + (e.range.getSheet().getName()) + "): " + err.message);

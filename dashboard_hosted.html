@@ -104,6 +104,7 @@ h1,h2,h3,h4,p{margin:0}
 /* scrollable participant detail (10 rows visible) */
 #participant-tbl-wrap{max-height:446px;overflow-y:auto}
 #participant-tbl-wrap .tbl th{position:sticky;top:0;z-index:1}
+#participant-tbl-wrap .tbl td:nth-child(3),#participant-tbl-wrap .tbl th:nth-child(3){max-width:160px;overflow:hidden;text-overflow:ellipsis}
 
 /* loading overlay */
 .loading-overlay{position:fixed;inset:0;background:rgba(238,236,230,.85);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:999;transition:opacity .3s}
@@ -452,23 +453,30 @@ function render() {
   document.getElementById('sum-in-foot').textContent  = pct.toFixed(1) + "% of register";
   document.getElementById('sum-out-foot').textContent = (100 - pct).toFixed(1) + "% remaining";
 
-  renderChart(filtered, d.agendaTargets || {});
+  renderChart(filtered);
   renderCountry(filtered);
   renderParticipants(filtered);
 }
 
-function renderChart(filtered, targets) {
-  var agendas = Object.keys(targets).length ? Object.keys(targets) : [...new Set(filtered.map(function(p) { return p.agenda; }))];
+function renderChart(filtered) {
+  var agendaMap = {};
+  filtered.forEach(function(p) {
+    if (!p.agenda || !p.name) return;
+    if (!agendaMap[p.agenda]) agendaMap[p.agenda] = { all: {}, hadir: {} };
+    agendaMap[p.agenda].all[p.name.toLowerCase()] = true;
+    if (p.status === "HADIR") agendaMap[p.agenda].hadir[p.name.toLowerCase()] = true;
+  });
+  var agendas = Object.keys(agendaMap).sort();
   var bars = document.getElementById('chart-bars');
   var labels = document.getElementById('chart-labels');
   var mobile = document.getElementById('chart-mobile');
   var maxVal = Math.max(1, ...agendas.map(function(a) {
-    return Math.max(targets[a] || 0, filtered.filter(function(p) { return p.agenda === a && p.status === "HADIR"; }).length);
+    return Math.max(Object.keys(agendaMap[a].all).length, Object.keys(agendaMap[a].hadir).length);
   }));
   bars.innerHTML = ""; labels.innerHTML = ""; mobile.innerHTML = "";
   agendas.forEach(function(a) {
-    var t = targets[a] || 0;
-    var act = filtered.filter(function(p) { return p.agenda === a && p.status === "HADIR"; }).length;
+    var t = Object.keys(agendaMap[a].all).length;
+    var act = Object.keys(agendaMap[a].hadir).length;
     var hT = Math.round((t / maxVal) * 130);
     var hA = Math.round((act / maxVal) * 130);
     bars.insertAdjacentHTML('beforeend',

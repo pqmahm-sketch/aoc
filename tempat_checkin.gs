@@ -44,13 +44,13 @@ function _classifyTempat(day, month, year, timeMin) {
   if (month !== 11 || year !== 2026) return "";
   if (day < 17 || day > 20) return "";
 
-  // RESINDA HOTEL: 17-20/11/2026, 06:00 - 07:20
-  if (day >= 17 && day <= 20 && timeMin >= 360 && timeMin <= 440)
-    return "RESINDA HOTEL";
+  // RESINDA: 17-20/11/2026, 06:00 - 08:00
+  if (day >= 17 && day <= 20 && timeMin >= 360 && timeMin <= 480)
+    return "RESINDA";
 
-  // SRTC: 17-18/11 15:00-16:30  |  19/11 21:00-23:00
-  if ((day >= 17 && day <= 18 && timeMin >= 900 && timeMin <= 990) ||
-      (day === 19 && timeMin >= 1260 && timeMin <= 1380))
+  // SRTC: 17-18/11 15:00-17:00  |  19/11 21:00-23:59
+  if ((day >= 17 && day <= 18 && timeMin >= 900 && timeMin <= 1020) ||
+      (day === 19 && timeMin >= 1260 && timeMin <= 1439))
     return "SRTC";
 
   // BALLROOM: 19/11/2026, 15:30 - 18:00
@@ -61,16 +61,16 @@ function _classifyTempat(day, month, year, timeMin) {
   if (day === 20 && timeMin >= 500 && timeMin <= 570)
     return "WHOOSH TEGALLUAR";
 
-  // MUSEUM KAA: 20/11/2026, 10:00 - 11:30
-  if (day === 20 && timeMin >= 600 && timeMin <= 690)
+  // MUSEUM KAA: 20/11/2026, 09:32 - 10:45
+  if (day === 20 && timeMin >= 572 && timeMin <= 645)
     return "MUSEUM KAA";
 
-  // WHEELS DAGO: 20/11/2026, 12:45 - 13:45
-  if (day === 20 && timeMin >= 765 && timeMin <= 825)
+  // WHEELS DAGO: 20/11/2026, 10:50 - 12:45
+  if (day === 20 && timeMin >= 650 && timeMin <= 765)
     return "WHEELS DAGO";
 
-  // TANGKUBAN PERAHU: 20/11/2026, 15:00 - 16:45
-  if (day === 20 && timeMin >= 900 && timeMin <= 1005)
+  // TANGKUBAN PERAHU: 20/11/2026, 15:45 - 16:45
+  if (day === 20 && timeMin >= 945 && timeMin <= 1005)
     return "TANGKUBAN PERAHU";
 
   // KARSALAND: 20/11/2026, 17:00 - 18:00
@@ -158,7 +158,7 @@ function klasifikasiTempatCheckIn() {
     }
 
     newTempat.push([tp]);
-    newStatus.push([(ci && tp) ? "HADIR" : "BELUM HADIR"]);
+    newStatus.push([ci ? "HADIR" : "BELUM HADIR"]);
   }
 
   sheet.getRange(HEADER_ROW + 1, TEMPAT_COL, dataRows, 1).setValues(newTempat);
@@ -209,7 +209,7 @@ function onEdit(e) {
     sheet.getRange(row, TEMPAT_COL).setValue(tp);
   }
 
-  sheet.getRange(row, STATUS_COL).setValue((ci && tp) ? "HADIR" : "BELUM HADIR");
+  sheet.getRange(row, STATUS_COL).setValue(ci ? "HADIR" : "BELUM HADIR");
 }
 
 // ============================================================
@@ -242,7 +242,7 @@ function onChangeHandler(e) {
       tp = getTempatCheckIn(ci);
     }
 
-    var expectedSt = (ci && tp) ? "HADIR" : "BELUM HADIR";
+    var expectedSt = ci ? "HADIR" : "BELUM HADIR";
     if (tp !== (tpVals[i][0] || "").trim() || expectedSt !== (stVals[i][0] || "").trim()) {
       changed = true;
     }
@@ -277,7 +277,7 @@ function onEditInstallable(e) {
         tp = getTempatCheckIn(ci);
         sheet.getRange(row, TEMPAT_COL).setValue(tp);
       }
-      sheet.getRange(row, STATUS_COL).setValue((ci && tp) ? "HADIR" : "BELUM HADIR");
+      sheet.getRange(row, STATUS_COL).setValue(ci ? "HADIR" : "BELUM HADIR");
     }
   } catch (err) {
     Logger.log("onEditInstallable error: " + err.message);
@@ -322,17 +322,17 @@ function hapusTrigger() {
 // ============================================================
 function testKlasifikasi() {
   var cases = [
-    { input: "17/11/2026 06:30:00", tempat: "RESINDA HOTEL",    agenda: "ORIENTATION" },
-    { input: "18/11/2026 07:00:00", tempat: "RESINDA HOTEL",    agenda: "OPENING & COM" },
+    { input: "17/11/2026 06:30:00", tempat: "RESINDA",          agenda: "ORIENTATION" },
+    { input: "18/11/2026 07:00:00", tempat: "RESINDA",          agenda: "OPENING & COM" },
     { input: "17/11/2026 15:30:00", tempat: "SRTC",             agenda: "ORIENTATION" },
-    { input: "18/11/2026 16:00:00", tempat: "SRTC",             agenda: "OPENING & COM" },
+    { input: "18/11/2026 16:30:00", tempat: "SRTC",             agenda: "OPENING & COM" },
     { input: "19/11/2026 16:00:00", tempat: "BALLROOM",         agenda: "FUN & AWARDING" },
     { input: "19/11/2026 21:30:00", tempat: "SRTC",             agenda: "FUN & AWARDING" },
-    { input: "20/11/2026 06:30:00", tempat: "RESINDA HOTEL",    agenda: "EXP LEARNING" },
+    { input: "20/11/2026 06:30:00", tempat: "RESINDA",          agenda: "EXP LEARNING" },
     { input: "20/11/2026 08:45:00", tempat: "WHOOSH TEGALLUAR", agenda: "EXP LEARNING" },
-    { input: "20/11/2026 10:30:00", tempat: "MUSEUM KAA",       agenda: "EXP LEARNING" },
-    { input: "20/11/2026 13:00:00", tempat: "WHEELS DAGO",      agenda: "EXP LEARNING" },
-    { input: "20/11/2026 15:30:00", tempat: "TANGKUBAN PERAHU", agenda: "EXP LEARNING" },
+    { input: "20/11/2026 10:00:00", tempat: "MUSEUM KAA",       agenda: "EXP LEARNING" },
+    { input: "20/11/2026 11:30:00", tempat: "WHEELS DAGO",      agenda: "EXP LEARNING" },
+    { input: "20/11/2026 16:00:00", tempat: "TANGKUBAN PERAHU", agenda: "EXP LEARNING" },
     { input: "20/11/2026 17:30:00", tempat: "KARSALAND",        agenda: "EXP LEARNING" }
   ];
 
