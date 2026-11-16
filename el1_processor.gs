@@ -88,7 +88,8 @@ function processAll()     { processHP(); processScanner(); }
 
 // ============================================================
 // Generic: baca lookup dari satu sheet sumber (kolom A & D)
-// Mengembalikan { code: [timestamp1, timestamp2, ...] }
+// Mengembalikan { code: [Date, Date, ...] }
+// Parse langsung ke Date object agar tidak tergantung format display.
 // ============================================================
 function _buildLookup(ss, sheetName) {
   var sheet = ss.getSheetByName(sheetName);
@@ -107,9 +108,12 @@ function _buildLookup(ss, sheetName) {
 
     if (!scanned || !timestamp) continue;
 
+    var date = parseDateString(timestamp);
+    if (!date || isNaN(date.getTime())) continue;
+
     var key = scanned.toLowerCase();
     if (!lookup[key]) lookup[key] = [];
-    lookup[key].push(timestamp);
+    lookup[key].push(date);
   }
 
   Logger.log(sheetName + ": " + Object.keys(lookup).length + " entries.");
@@ -159,13 +163,24 @@ function syncToMLooker() {
     var matchedTS = "";
 
     if (lookup[key] && prefilledTempat) {
-      var timestamps = lookup[key];
-      for (var j = 0; j < timestamps.length; j++) {
-        var classifiedTempat = getTempatCheckIn(timestamps[j]);
-        var classifiedAgenda = getAgendaFromCheckIn(timestamps[j]);
-        if (classifiedTempat === prefilledTempat &&
-            prefilledAgenda.indexOf(classifiedAgenda) === 0) {
-          matchedTS = timestamps[j];
+      var dates = lookup[key];
+      for (var j = 0; j < dates.length; j++) {
+        var d     = dates[j];
+        var day   = d.getDate();
+        var month = d.getMonth() + 1;
+        var year  = d.getFullYear();
+        var hrs   = d.getHours();
+        var mins  = d.getMinutes();
+        var secs  = d.getSeconds();
+        var tMin  = hrs * 60 + mins;
+
+        var clTempat = _classifyTempat(day, month, year, tMin);
+        var clAgenda = _classifyAgenda(day, month, year);
+
+        if (clTempat === prefilledTempat &&
+            prefilledAgenda.indexOf(clAgenda) === 0) {
+          matchedTS = _pad(day) + "/" + _pad(month) + "/" + year + " " +
+                      _pad(hrs) + ":" + _pad(mins) + ":" + _pad(secs);
           break;
         }
       }
