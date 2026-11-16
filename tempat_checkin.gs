@@ -61,20 +61,16 @@ function _classifyTempat(day, month, year, timeMin) {
   if (day === 20 && timeMin >= 500 && timeMin <= 570)
     return "WHOOSH TEGALLUAR";
 
-  // MUSEUM KAA: 20/11/2026, 09:32 - 10:45
-  if (day === 20 && timeMin >= 572 && timeMin <= 645)
-    return "MUSEUM KAA";
-
   // WHEELS DAGO: 20/11/2026, 10:50 - 12:45
   if (day === 20 && timeMin >= 650 && timeMin <= 765)
     return "WHEELS DAGO";
 
-  // TANGKUBAN PERAHU: 20/11/2026, 15:45 - 16:45
-  if (day === 20 && timeMin >= 945 && timeMin <= 1005)
+  // TANGKUBAN PERAHU: 20/11/2026, 14:45 - 15:45
+  if (day === 20 && timeMin >= 885 && timeMin <= 945)
     return "TANGKUBAN PERAHU";
 
-  // KARSALAND: 20/11/2026, 17:00 - 18:00
-  if (day === 20 && timeMin >= 1020 && timeMin <= 1080)
+  // KARSALAND: 20/11/2026, 16:15 - 17:00
+  if (day === 20 && timeMin >= 975 && timeMin <= 1020)
     return "KARSALAND";
 
   return "";
@@ -330,10 +326,9 @@ function testKlasifikasi() {
     { input: "19/11/2026 21:30:00", tempat: "SRTC",             agenda: "FUN & AWARDING" },
     { input: "20/11/2026 06:30:00", tempat: "RESINDA",          agenda: "EXP LEARNING" },
     { input: "20/11/2026 08:45:00", tempat: "WHOOSH TEGALLUAR", agenda: "EXP LEARNING" },
-    { input: "20/11/2026 10:00:00", tempat: "MUSEUM KAA",       agenda: "EXP LEARNING" },
     { input: "20/11/2026 11:30:00", tempat: "WHEELS DAGO",      agenda: "EXP LEARNING" },
-    { input: "20/11/2026 16:00:00", tempat: "TANGKUBAN PERAHU", agenda: "EXP LEARNING" },
-    { input: "20/11/2026 17:30:00", tempat: "KARSALAND",        agenda: "EXP LEARNING" }
+    { input: "20/11/2026 15:00:00", tempat: "TANGKUBAN PERAHU", agenda: "EXP LEARNING" },
+    { input: "20/11/2026 16:30:00", tempat: "KARSALAND",        agenda: "EXP LEARNING" }
   ];
 
   var results = [];
