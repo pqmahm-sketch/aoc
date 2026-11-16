@@ -4,8 +4,8 @@
  * ============================================================
  * Sheet HP & SCANNER — kolom (sama):
  *   A (1) = TIMESTAMP       ← input dari scanner / form
- *   B (2) = DATE            ← auto-fill (dd-mm-yyyy)
- *   C (3) = TIME            ← auto-fill (HH:mm)
+ *   B (2) = DATE            ← auto-fill (mm/dd/yyyy)
+ *   C (3) = TIME            ← auto-fill (HH:mm:ss)
  *   D (4) = SCANNED DETAILS ← identifier peserta
  *
  * Sync ke M.LOOKER:
@@ -66,12 +66,13 @@ function _processSheet(sheetName) {
 
     var hrs   = date.getHours();
     var mins  = date.getMinutes();
+    var secs  = date.getSeconds();
     var day   = date.getDate();
     var month = date.getMonth() + 1;
     var year  = date.getFullYear();
 
-    dates.push([_pad(day) + "-" + _pad(month) + "-" + year]);
-    times.push([_pad(hrs) + ":" + _pad(mins)]);
+    dates.push([_pad(month) + "/" + _pad(day) + "/" + year]);
+    times.push([_pad(hrs) + ":" + _pad(mins) + ":" + _pad(secs)]);
   }
 
   sheet.getRange(2, SRC_DATE, dataRows, 1).setValues(dates);
@@ -206,12 +207,13 @@ function _onEditSource(e) {
 
       var hrs   = date.getHours();
       var mins  = date.getMinutes();
+      var secs  = date.getSeconds();
       var day   = date.getDate();
       var month = date.getMonth() + 1;
       var year  = date.getFullYear();
 
-      sheet.getRange(row, SRC_DATE).setValue(_pad(day) + "-" + _pad(month) + "-" + year);
-      sheet.getRange(row, SRC_TIME).setValue(_pad(hrs) + ":" + _pad(mins));
+      sheet.getRange(row, SRC_DATE).setValue(_pad(month) + "/" + _pad(day) + "/" + year);
+      sheet.getRange(row, SRC_TIME).setValue(_pad(hrs) + ":" + _pad(mins) + ":" + _pad(secs));
     }
   } catch (err) {
     Logger.log("onEditSource error (" + (e.range.getSheet().getName()) + "): " + err.message);

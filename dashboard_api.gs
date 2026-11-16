@@ -170,8 +170,8 @@ function appendScannerData(scannedValue) {
   var mins  = now.getMinutes();
 
   var timestamp = Utilities.formatDate(now, "Asia/Jakarta", "dd/MM/yyyy HH:mm:ss");
-  var dateStr   = _pad(day) + "-" + _pad(month) + "-" + year;
-  var timeStr   = _pad(hrs) + ":" + _pad(mins);
+  var dateStr   = _pad(month) + "/" + _pad(day) + "/" + year;
+  var timeStr   = _pad(hrs) + ":" + _pad(mins) + ":" + _pad(now.getSeconds());
 
   var nextRow = _getNextEmptyRow(scannerSheet);
   scannerSheet.getRange(nextRow, 1, 1, 4).setValues([[timestamp, dateStr, timeStr, scannedValue]]);
