@@ -81,10 +81,10 @@ function _classifyTempat(day, month, year, timeMin) {
 // ============================================================
 function _classifyAgenda(day, month, year) {
   if (month !== 11 || year !== 2026) return "";
-  if (day === 17) return "ORIENTATION";
-  if (day === 18) return "OPENING & COM";
-  if (day === 19) return "FUN & AWARDING";
-  if (day === 20) return "EXP LEARNING";
+  if (day === 17) return "ORIENTATION (17/11/26)";
+  if (day === 18) return "OPENING & COM (18/11/26)";
+  if (day === 19) return "FUN & AWARDING (19/11/26)";
+  if (day === 20) return "CULTURAL TRIP (20/11/26)";
   return "";
 }
 
@@ -328,17 +328,17 @@ function hapusTrigger() {
 // ============================================================
 function testKlasifikasi() {
   var cases = [
-    { input: "17/11/2026 06:30:00", tempat: "RESINDA",          agenda: "ORIENTATION" },
-    { input: "18/11/2026 07:00:00", tempat: "RESINDA",          agenda: "OPENING & COM" },
-    { input: "17/11/2026 15:30:00", tempat: "SRTC",             agenda: "ORIENTATION" },
-    { input: "18/11/2026 16:30:00", tempat: "SRTC",             agenda: "OPENING & COM" },
-    { input: "19/11/2026 16:00:00", tempat: "BALLROOM",         agenda: "FUN & AWARDING" },
-    { input: "19/11/2026 21:30:00", tempat: "SRTC",             agenda: "FUN & AWARDING" },
-    { input: "20/11/2026 06:30:00", tempat: "RESINDA",          agenda: "EXP LEARNING" },
-    { input: "20/11/2026 08:45:00", tempat: "WHOOSH TEGALLUAR", agenda: "EXP LEARNING" },
-    { input: "20/11/2026 11:30:00", tempat: "WHEELS DAGO",      agenda: "EXP LEARNING" },
-    { input: "20/11/2026 15:00:00", tempat: "TANGKUBAN PERAHU", agenda: "EXP LEARNING" },
-    { input: "20/11/2026 16:30:00", tempat: "KARSALAND",        agenda: "EXP LEARNING" }
+    { input: "17/11/2026 06:30:00", tempat: "RESINDA",          agenda: "ORIENTATION (17/11/26)" },
+    { input: "18/11/2026 07:00:00", tempat: "RESINDA",          agenda: "OPENING & COM (18/11/26)" },
+    { input: "17/11/2026 15:30:00", tempat: "SRTC",             agenda: "ORIENTATION (17/11/26)" },
+    { input: "18/11/2026 16:30:00", tempat: "SRTC",             agenda: "OPENING & COM (18/11/26)" },
+    { input: "19/11/2026 16:00:00", tempat: "BALLROOM",         agenda: "FUN & AWARDING (19/11/26)" },
+    { input: "19/11/2026 21:30:00", tempat: "SRTC",             agenda: "FUN & AWARDING (19/11/26)" },
+    { input: "20/11/2026 06:30:00", tempat: "RESINDA",          agenda: "CULTURAL TRIP (20/11/26)" },
+    { input: "20/11/2026 08:45:00", tempat: "WHOOSH TEGALLUAR", agenda: "CULTURAL TRIP (20/11/26)" },
+    { input: "20/11/2026 11:30:00", tempat: "WHEELS DAGO",      agenda: "CULTURAL TRIP (20/11/26)" },
+    { input: "20/11/2026 15:00:00", tempat: "TANGKUBAN PERAHU", agenda: "CULTURAL TRIP (20/11/26)" },
+    { input: "20/11/2026 16:30:00", tempat: "KARSALAND",        agenda: "CULTURAL TRIP (20/11/26)" }
   ];
 
   var results = [];
