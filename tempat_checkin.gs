@@ -175,12 +175,22 @@ function parseDateString(str) {
   var tp = parts[1].split(":");
   if (tp.length < 2) return null;
 
-  var day   = parseInt(dp[0], 10);
-  var month = parseInt(dp[1], 10) - 1;
-  var year  = parseInt(dp[2], 10);
-  var hrs   = parseInt(tp[0], 10);
-  var mins  = parseInt(tp[1], 10);
-  var secs  = tp.length >= 3 ? parseInt(tp[2], 10) : 0;
+  var a    = parseInt(dp[0], 10);
+  var b    = parseInt(dp[1], 10);
+  var year = parseInt(dp[2], 10);
+
+  var day, month;
+  if (b > 12) {
+    day = b; month = a - 1;   // mm/dd/yyyy (scanner format)
+  } else if (a > 12) {
+    day = a; month = b - 1;   // dd/mm/yyyy
+  } else {
+    day = a; month = b - 1;   // ambiguous → default dd/mm/yyyy
+  }
+
+  var hrs  = parseInt(tp[0], 10);
+  var mins = parseInt(tp[1], 10);
+  var secs = tp.length >= 3 ? parseInt(tp[2], 10) : 0;
 
   return new Date(year, month, day, hrs, mins, secs);
 }

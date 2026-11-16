@@ -49,31 +49,24 @@ function _processSheet(sheetName) {
   if (lastRow <= 1) return;
 
   var dataRows = lastRow - 1;
-  var rawVals  = sheet.getRange(2, SRC_TIMESTAMP, dataRows, 1).getValues();
   var dispVals = sheet.getRange(2, SRC_TIMESTAMP, dataRows, 1).getDisplayValues();
 
   var dates = [];
   var times = [];
 
-  for (var i = 0; i < rawVals.length; i++) {
-    var raw  = rawVals[i][0];
+  for (var i = 0; i < dispVals.length; i++) {
     var disp = (dispVals[i][0] || "").trim();
+    if (!disp) { dates.push([""]); times.push([""]); continue; }
 
-    var date = null;
-    if (raw instanceof Date && !isNaN(raw.getTime())) {
-      date = raw;
-    } else if (disp) {
-      date = parseDateString(disp);
-    }
-
+    var date = parseDateString(disp);
     if (!date || isNaN(date.getTime())) {
       dates.push([""]); times.push([""]);
       continue;
     }
 
-    var hrs  = date.getHours();
-    var mins = date.getMinutes();
-    var day  = date.getDate();
+    var hrs   = date.getHours();
+    var mins  = date.getMinutes();
+    var day   = date.getDate();
     var month = date.getMonth() + 1;
     var year  = date.getFullYear();
 
@@ -205,16 +198,10 @@ function _onEditSource(e) {
     var numRows = e.range.getNumRows();
     for (var i = 0; i < numRows; i++) {
       var row  = e.range.getRow() + i;
-      var raw  = sheet.getRange(row, SRC_TIMESTAMP).getValue();
       var disp = sheet.getRange(row, SRC_TIMESTAMP).getDisplayValue().trim();
+      if (!disp) continue;
 
-      var date = null;
-      if (raw instanceof Date && !isNaN(raw.getTime())) {
-        date = raw;
-      } else if (disp) {
-        date = parseDateString(disp);
-      }
-
+      var date = parseDateString(disp);
       if (!date || isNaN(date.getTime())) continue;
 
       var hrs   = date.getHours();
