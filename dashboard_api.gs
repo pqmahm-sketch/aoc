@@ -27,12 +27,14 @@
  *   B  (idx 1)  = Participant Category
  *   E  (idx 4)  = Name
  *   F  (idx 5)  = Country
- *   H  (idx 7)  = Bus Number
- *   I  (idx 8)  = Seat
- *   J  (idx 9)  = Agenda
- *   K  (idx 10) = Status  (HADIR / BELUM HADIR)
- *   L  (idx 11) = Check-in Time  (dd/MM/yyyy HH:mm:ss)
- *   M  (idx 12) = Check-in Point / Tempat Check In
+ *   H  (idx 7)  = Seat Opening
+ *   I  (idx 8)  = Seat Awarding
+ *   J  (idx 9)  = Bus Daily
+ *   K  (idx 10) = Bus Cultural
+ *   L  (idx 11) = Agenda
+ *   M  (idx 12) = Status  (HADIR / BELUM HADIR)
+ *   N  (idx 13) = Check-in Time  (dd/MM/yyyy HH:mm:ss)
+ *   O  (idx 14) = Location / Tempat Check In
  * ============================================================
  */
 
@@ -65,7 +67,7 @@ function doGet(e) {
 }
 
 function getDashboardData() {
-  var ss = SpreadsheetApp.openById("1S3nAnX5ije6prGTwnJ7sZsdYmQtu7q8g");
+  var ss = SpreadsheetApp.openById("1EEFkPof-U2nPvypbSGhSwpXKlisDWloZNkoN-StoB-Y");
   var sheet = ss.getSheetByName("M.LOOKER");
 
   if (!sheet) {
@@ -83,7 +85,7 @@ function getDashboardData() {
     };
   }
 
-  var maxCol = Math.max(sheet.getLastColumn(), 13);
+  var maxCol = Math.max(sheet.getLastColumn(), 15);
   var rows = sheet.getRange(2, 1, lastRow - 1, maxCol).getDisplayValues();
 
   var participants = [];
@@ -94,14 +96,17 @@ function getDashboardData() {
   for (var i = 0; i < rows.length; i++) {
     var r = rows[i];
 
-    var category     = (r[1]  || "").trim();
-    var name         = (r[4]  || "").trim();
-    var country      = (r[5]  || "").trim();
-    var bus          = (r[7]  || "").trim();
-    var seat         = (r[8]  || "").trim();
-    var agenda       = (r[9]  || "").trim();
-    var checkinRaw   = (r[11] || "").trim();
-    var checkinPoint = (r[12] || "").trim();
+    var category     = (r[1]  || "").trim();  // B
+    var name         = (r[4]  || "").trim();  // E
+    var country      = (r[5]  || "").trim();  // F
+    var seatOpening  = (r[7]  || "").trim();  // H
+    var seatAwarding = (r[8]  || "").trim();  // I
+    var busDaily     = (r[9]  || "").trim();  // J
+    var busCultural  = (r[10] || "").trim();  // K
+    var agenda       = (r[11] || "").trim();  // L
+    var status       = (r[12] || "").trim();  // M
+    var checkinRaw   = (r[13] || "").trim();  // N
+    var location     = (r[14] || "").trim();  // O
 
     if (!name && !country && !category) continue;
 
@@ -114,29 +119,20 @@ function getDashboardData() {
     }
     if (agenda) agendaTargets[agenda] = (agendaTargets[agenda] || 0) + 1;
 
-    var dateOnly = "";
-    if (checkinRaw !== "") {
-      var sp = checkinRaw.split(" ");
-      if (sp.length >= 1) dateOnly = sp[0];
-    }
-
-    var statusRaw = (r[10] || "").trim();
-    var status;
-    if (statusRaw) {
-      status = statusRaw;
-    } else {
-      status = (checkinRaw !== "" && checkinPoint !== "") ? "HADIR" : "BELUM HADIR";
+    if (!status) {
+      status = (checkinRaw !== "" && location !== "") ? "HADIR" : "BELUM HADIR";
     }
 
     participants.push({
       name:         name,
       country:      country,
       category:     category,
-      seat:         seat,
+      seatOpening:  seatOpening,
+      seatAwarding: seatAwarding,
+      busDaily:     busDaily,
+      busCultural:  busCultural,
       agenda:       agenda,
-      bus:          bus,
-      checkinPoint: checkinPoint,
-      date:         dateOnly,
+      location:     location,
       checkinTime:  checkinRaw || null,
       status:       status
     });
@@ -161,7 +157,7 @@ function _cutoff() {
 }
 
 function appendScannerData(scannedValue) {
-  var ss = SpreadsheetApp.openById("1S3nAnX5ije6prGTwnJ7sZsdYmQtu7q8g");
+  var ss = SpreadsheetApp.openById("1EEFkPof-U2nPvypbSGhSwpXKlisDWloZNkoN-StoB-Y");
 
   var scannerSheet = ss.getSheetByName("SCANNER");
   if (!scannerSheet) throw new Error("Sheet SCANNER tidak ditemukan");

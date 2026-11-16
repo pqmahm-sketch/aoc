@@ -202,7 +202,7 @@ h1,h2,h3,h4,p{margin:0}
 .scanner-bar input{flex:1;border:none;outline:none;font:600 14px 'Inter',sans-serif;color:#1a1a1a;background:transparent;padding:4px 0}
 .scanner-bar input::placeholder{color:#b0b0b0;font-weight:400}
 .scanner-bar .scan-status{font-size:11px;color:#8a8a8a;white-space:nowrap}
-.scan-toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);padding:12px 24px;border-radius:10px;font:600 13px 'Inter',sans-serif;color:#fff;z-index:1000;opacity:0;transition:opacity .3s;pointer-events:none;max-width:90vw;text-align:center}
+.scan-toast{position:fixed;top:24px;left:50%;transform:translateX(-50%);padding:12px 24px;border-radius:10px;font:600 13px 'Inter',sans-serif;color:#fff;z-index:1000;opacity:0;transition:opacity .3s;pointer-events:none;max-width:90vw;text-align:center}
 .scan-toast.success{background:#1e7a3a}
 .scan-toast.error{background:#b42318}
 .scan-toast.show{opacity:1}
@@ -291,7 +291,7 @@ h1,h2,h3,h4,p{margin:0}
       </div>
       <div class="bus-cat">
         <label><input type="checkbox" id="bus-daily" checked> Bus Daily</label>
-        <label><input type="checkbox" id="bus-cultural" checked> Bus Cultural Trip</label>
+        <label><input type="checkbox" id="bus-cultural"> Bus Cultural Trip</label>
       </div>
     </label>
   </div>
@@ -361,7 +361,7 @@ h1,h2,h3,h4,p{margin:0}
     </div>
     <div class="tbl-wrap" id="participant-tbl-wrap">
       <table class="tbl">
-        <thead><tr><th class="idx">#</th><th>Check-in time</th><th>Name</th><th>Country</th><th>Category</th><th>Seat</th><th>Agenda</th><th>Bus</th><th>Check-in Point</th><th>Status</th></tr></thead>
+        <thead><tr><th class="idx">#</th><th>Check-in time</th><th>Name</th><th>Country</th><th>Category</th><th>Seat Open</th><th>Seat Award</th><th>Bus Daily</th><th>Bus Cultural</th><th>Location</th><th>Status</th></tr></thead>
         <tbody id="participant-tbody"></tbody>
       </table>
     </div>
@@ -386,14 +386,7 @@ var API_URL = "https://script.google.com/macros/s/AKfycbxrXi3Of8J5Cdl4egisWpPP_H
 var REFRESH_INTERVAL = 30000; // refresh tiap 30 detik (dalam milidetik)
 /* ============================================================ */
 
-var STATE = { raw: null, filters: { category: "", agenda: "", location: "", bus: "" }, busCategory: { daily: true, cultural: true } };
-
-var AGENDA_OPTIONS = [
-  "ORIENTATION (17/11/26)",
-  "OPENING & COM (18/11/26)",
-  "FUN & AWARDING (19/11/26)",
-  "CULTURAL TRIP (20/11/26)"
-];
+var STATE = { raw: null, filters: { category: "", agenda: "", location: "", bus: "" }, busType: "daily" };
 
 function countUniqueNames(arr) {
   var s = {};
@@ -414,9 +407,14 @@ function uniqueSorted(arr, key) {
 function populateFilters(data) {
   var p = data.participants;
   fillSelect("filter-category", uniqueSorted(p, "category"));
-  fillSelect("filter-agenda",   AGENDA_OPTIONS);
-  fillSelect("filter-location", uniqueSorted(p, "checkinPoint"));
-  fillSelect("filter-bus",      uniqueSorted(p, "bus"));
+  fillSelect("filter-agenda",   uniqueSorted(p, "agenda"));
+  fillSelect("filter-location", uniqueSorted(p, "location"));
+  updateBusOptions(p);
+}
+
+function updateBusOptions(participants) {
+  var field = STATE.busType === "daily" ? "busDaily" : "busCultural";
+  fillSelect("filter-bus", uniqueSorted(participants, field));
 }
 
 function fillSelect(id, values) {
@@ -437,26 +435,16 @@ function fillSelect(id, values) {
   });
 }
 
-function isBusCultural(busNum) {
-  if (!busNum) return false;
-  var n = parseInt(busNum, 10);
-  return !isNaN(n) && n >= 20;
-}
-
 function applyFilters(participants) {
   var f = STATE.filters;
-  var bc = STATE.busCategory;
   return participants.filter(function(p) {
-    if (!bc.daily && !bc.cultural) return false;
-    if (p.bus) {
-      var cultural = isBusCultural(p.bus);
-      if (cultural && !bc.cultural) return false;
-      if (!cultural && !bc.daily) return false;
+    if (f.bus) {
+      var busField = STATE.busType === "daily" ? p.busDaily : p.busCultural;
+      if (busField !== f.bus) return false;
     }
     return (!f.category || p.category === f.category) &&
            (!f.agenda   || p.agenda === f.agenda) &&
-           (!f.location || p.checkinPoint === f.location) &&
-           (!f.bus      || p.bus === f.bus);
+           (!f.location || p.location === f.location);
   });
 }
 
@@ -565,22 +553,22 @@ function renderParticipants(filtered) {
       '<td>' + p.name + '</td>' +
       '<td>' + p.country + '</td>' +
       '<td>' + p.category + '</td>' +
-      '<td class="num">' + p.seat + '</td>' +
-      '<td>' + p.agenda + '</td>' +
-      '<td class="num">' + (p.bus || "—") + '</td>' +
-      '<td>' + (p.checkinPoint || "—") + '</td>' +
+      '<td class="num">' + (p.seatOpening || "—") + '</td>' +
+      '<td class="num">' + (p.seatAwarding || "—") + '</td>' +
+      '<td class="num">' + (p.busDaily || "—") + '</td>' +
+      '<td class="num">' + (p.busCultural || "—") + '</td>' +
+      '<td>' + (p.location || "—") + '</td>' +
       '<td><span class="pill-status ' + statusClass + '">' + p.status + '</span></td>' +
     '</tr>';
   }).join('');
 
-  // mobile list
   var mob = document.getElementById('participant-mobile');
   mob.innerHTML = sorted.map(function(p) {
     var sc = p.status === "HADIR" ? "status-hadir" : "status-belum";
     return '<div class="m-detail-row">' +
       '<div class="l1"><div class="name">' + p.name + '</div><span class="pill-status ' + sc + '">' + p.status + '</span></div>' +
-      '<div class="l2"><span>' + (p.checkinTime || "—").slice(0, 16) + '</span><span class="dot">·</span><span>' + p.country + '</span><span class="dot">·</span><span>Seat ' + p.seat + '</span></div>' +
-      '<div class="l2" style="margin-top:2px"><span>' + p.agenda + '</span><span class="dot">·</span><span>' + (p.bus || "—") + '</span><span class="dot">·</span><span>' + (p.checkinPoint || "—") + '</span></div>' +
+      '<div class="l2"><span>' + (p.checkinTime || "—").slice(0, 16) + '</span><span class="dot">·</span><span>' + p.country + '</span><span class="dot">·</span><span>Seat ' + (p.seatOpening || "—") + '/' + (p.seatAwarding || "—") + '</span></div>' +
+      '<div class="l2" style="margin-top:2px"><span>' + p.agenda + '</span><span class="dot">·</span><span>D:' + (p.busDaily || "—") + ' C:' + (p.busCultural || "—") + '</span><span class="dot">·</span><span>' + (p.location || "—") + '</span></div>' +
     '</div>';
   }).join('');
 
@@ -594,9 +582,9 @@ function renderParticipants(filtered) {
 document.getElementById('btn-download').addEventListener('click', function() {
   if (!STATE.raw) return;
   var filtered = applyFilters(STATE.raw.participants);
-  var header = "No,Check-in Time,Name,Country,Category,Seat,Agenda,Bus,Check-in Point,Status\n";
+  var header = "No,Check-in Time,Name,Country,Category,Seat Opening,Seat Awarding,Bus Daily,Bus Cultural,Location,Status\n";
   var csv = header + filtered.map(function(p, i) {
-    return [i + 1, p.checkinTime || "", '"' + p.name + '"', p.country, p.category, p.seat, p.agenda, p.bus || "", p.checkinPoint || "", p.status].join(",");
+    return [i + 1, p.checkinTime || "", '"' + p.name + '"', p.country, p.category, p.seatOpening || "", p.seatAwarding || "", p.busDaily || "", p.busCultural || "", p.location || "", p.status].join(",");
   }).join("\n");
   var blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8" });
   var a = document.createElement("a");
@@ -614,11 +602,27 @@ document.querySelectorAll('[data-filter]').forEach(function(sel) {
 });
 
 document.getElementById('bus-daily').addEventListener('change', function(e) {
-  STATE.busCategory.daily = e.target.checked;
+  if (e.target.checked) {
+    document.getElementById('bus-cultural').checked = false;
+    STATE.busType = "daily";
+  } else {
+    document.getElementById('bus-cultural').checked = true;
+    STATE.busType = "cultural";
+  }
+  STATE.filters.bus = "";
+  if (STATE.raw) updateBusOptions(STATE.raw.participants);
   render();
 });
 document.getElementById('bus-cultural').addEventListener('change', function(e) {
-  STATE.busCategory.cultural = e.target.checked;
+  if (e.target.checked) {
+    document.getElementById('bus-daily').checked = false;
+    STATE.busType = "cultural";
+  } else {
+    document.getElementById('bus-daily').checked = true;
+    STATE.busType = "daily";
+  }
+  STATE.filters.bus = "";
+  if (STATE.raw) updateBusOptions(STATE.raw.participants);
   render();
 });
 

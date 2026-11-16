@@ -13,9 +13,9 @@
  * Sync ke M.LOOKER:
  *   HP.D / SCANNER.D (SCANNED DETAILS) di-match dengan
  *   M.LOOKER.D (UNIQUE CODE)
- *   → M.LOOKER.L = TIMESTAMP
- *   → M.LOOKER.M = TEMPAT CHECKIN
- *   → M.LOOKER.K = HADIR / BELUM HADIR
+ *   → M.LOOKER.N (14) = TIMESTAMP
+ *   → M.LOOKER.O (15) = TEMPAT CHECKIN / LOCATION
+ *   → M.LOOKER.M (13) = HADIR / BELUM HADIR
  *
  * Fungsi _classifyTempat, _classifyAgenda, _pad, parseDateString,
  * dan getSpreadsheet didefinisikan di tempat_checkin.gs
@@ -36,9 +36,9 @@ var SRC_TEMPAT    = 6;  // F
 
 // M.LOOKER column indices (1-based)
 var ML_UNIQUE_CODE = 4;   // D — lookup key
-var ML_STATUS      = 11;  // K
-var ML_CHECKIN     = 12;  // L
-var ML_TEMPAT      = 13;  // M
+var ML_STATUS      = 13;  // M
+var ML_CHECKIN     = 14;  // N
+var ML_TEMPAT      = 15;  // O
 
 // ============================================================
 // Generic: auto-fill kolom B, C, E, F dari TIMESTAMP (A)

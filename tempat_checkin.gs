@@ -5,20 +5,20 @@
  * Sheet: M.LOOKER
  *
  * Kolom yang dikelola:
- *   K  (11) = STATUS        → HADIR / BELUM HADIR
- *   L  (12) = CHECK IN      → timestamp
- *   M  (13) = TEMPAT CHECK IN
+ *   M  (13) = STATUS        → HADIR / BELUM HADIR
+ *   N  (14) = CHECK IN      → timestamp
+ *   O  (15) = TEMPAT CHECK IN / LOCATION
  *
  * Fungsi _classifyTempat dan _classifyAgenda dipakai bersama
  * oleh el1_processor.gs / HP & SCANNER processor (shared namespace Apps Script).
  * ============================================================
  */
 
-var SPREADSHEET_ID = "1S3nAnX5ije6prGTwnJ7sZsdYmQtu7q8g";
+var SPREADSHEET_ID = "1EEFkPof-U2nPvypbSGhSwpXKlisDWloZNkoN-StoB-Y";
 var SHEET_NAME     = "M.LOOKER";
-var STATUS_COL     = 11;  // K
-var CHECK_IN_COL   = 12;  // L
-var TEMPAT_COL     = 13;  // M
+var STATUS_COL     = 13;  // M
+var CHECK_IN_COL   = 14;  // N
+var TEMPAT_COL     = 15;  // O
 var HEADER_ROW     = 1;
 
 // ============================================================
